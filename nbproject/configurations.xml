@@ -1,0 +1,839 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configurationDescriptor version="95">
+  <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
+    <df root="." name="0">
+      <df name="arch">
+        <df name="x86">
+          <in>cpu.c</in>
+          <in>crtools.c</in>
+          <in>prlimit.c</in>
+          <in>restorer.c</in>
+          <in>vdso-pie.c</in>
+          <in>vdso.c</in>
+        </df>
+      </df>
+      <df name="lib">
+        <in>criu.c</in>
+      </df>
+      <df name="pie">
+        <df name="piegen">
+          <in>elf-x86-32.c</in>
+          <in>elf-x86-64.c</in>
+          <in>main.c</in>
+        </df>
+        <in>log-simple.c</in>
+        <in>parasite.c</in>
+        <in>pie-relocs.c</in>
+        <in>restorer.c</in>
+        <in>util-fd.c</in>
+        <in>util.c</in>
+      </df>
+      <df name="protobuf">
+        <df name="google">
+          <df name="protobuf">
+            <in>descriptor.pb-c.c</in>
+          </df>
+        </df>
+        <in>cgroup.pb-c.c</in>
+        <in>core-aarch64.pb-c.c</in>
+        <in>core-arm.pb-c.c</in>
+        <in>core-ppc64.pb-c.c</in>
+        <in>core-x86.pb-c.c</in>
+        <in>core.pb-c.c</in>
+        <in>cpuinfo.pb-c.c</in>
+        <in>creds.pb-c.c</in>
+        <in>eventfd.pb-c.c</in>
+        <in>eventpoll.pb-c.c</in>
+        <in>ext-file.pb-c.c</in>
+        <in>fdinfo.pb-c.c</in>
+        <in>fh.pb-c.c</in>
+        <in>fifo.pb-c.c</in>
+        <in>file-lock.pb-c.c</in>
+        <in>fown.pb-c.c</in>
+        <in>fs.pb-c.c</in>
+        <in>fsnotify.pb-c.c</in>
+        <in>ghost-file.pb-c.c</in>
+        <in>inventory.pb-c.c</in>
+        <in>ipc-desc.pb-c.c</in>
+        <in>ipc-msg.pb-c.c</in>
+        <in>ipc-sem.pb-c.c</in>
+        <in>ipc-shm.pb-c.c</in>
+        <in>ipc-var.pb-c.c</in>
+        <in>mm.pb-c.c</in>
+        <in>mnt.pb-c.c</in>
+        <in>netdev.pb-c.c</in>
+        <in>ns.pb-c.c</in>
+        <in>opts.pb-c.c</in>
+        <in>packet-sock.pb-c.c</in>
+        <in>pagemap.pb-c.c</in>
+        <in>pipe-data.pb-c.c</in>
+        <in>pipe.pb-c.c</in>
+        <in>pstree.pb-c.c</in>
+        <in>regfile.pb-c.c</in>
+        <in>remap-file-path.pb-c.c</in>
+        <in>rlimit.pb-c.c</in>
+        <in>rpc.pb-c.c</in>
+        <in>sa.pb-c.c</in>
+        <in>siginfo.pb-c.c</in>
+        <in>signalfd.pb-c.c</in>
+        <in>sk-inet.pb-c.c</in>
+        <in>sk-netlink.pb-c.c</in>
+        <in>sk-opts.pb-c.c</in>
+        <in>sk-packet.pb-c.c</in>
+        <in>sk-unix.pb-c.c</in>
+        <in>stats.pb-c.c</in>
+        <in>tcp-stream.pb-c.c</in>
+        <in>timer.pb-c.c</in>
+        <in>timerfd.pb-c.c</in>
+        <in>tty.pb-c.c</in>
+        <in>tun.pb-c.c</in>
+        <in>userns.pb-c.c</in>
+        <in>utsns.pb-c.c</in>
+        <in>vma.pb-c.c</in>
+      </df>
+      <in>action-scripts.c</in>
+      <in>aio.c</in>
+      <in>bfd.c</in>
+      <in>cgroup.c</in>
+      <in>cr-check.c</in>
+      <in>cr-dedup.c</in>
+      <in>cr-dump.c</in>
+      <in>cr-errno.c</in>
+      <in>cr-exec.c</in>
+      <in>cr-restore.c</in>
+      <in>cr-service.c</in>
+      <in>cr-show.c</in>
+      <in>crtools.c</in>
+      <in>eventfd.c</in>
+      <in>eventpoll.c</in>
+      <in>fifo.c</in>
+      <in>file-ids.c</in>
+      <in>file-lock.c</in>
+      <in>files-ext.c</in>
+      <in>files-reg.c</in>
+      <in>files.c</in>
+      <in>fsnotify.c</in>
+      <in>image-desc.c</in>
+      <in>image.c</in>
+      <in>ipc_ns.c</in>
+      <in>irmap.c</in>
+      <in>kcmp-ids.c</in>
+      <in>kerndat.c</in>
+      <in>libnetlink.c</in>
+      <in>log.c</in>
+      <in>lsm.c</in>
+      <in>mem.c</in>
+      <in>mount.c</in>
+      <in>namespaces.c</in>
+      <in>net.c</in>
+      <in>netfilter.c</in>
+      <in>page-pipe.c</in>
+      <in>page-read.c</in>
+      <in>page-xfer.c</in>
+      <in>pagemap-cache.c</in>
+      <in>parasite-syscall.c</in>
+      <in>pipes.c</in>
+      <in>plugin.c</in>
+      <in>proc_parse.c</in>
+      <in>protobuf-desc.c</in>
+      <in>protobuf.c</in>
+      <in>pstree.c</in>
+      <in>ptrace.c</in>
+      <in>rbtree.c</in>
+      <in>rst-malloc.c</in>
+      <in>sd-daemon.c</in>
+      <in>security.c</in>
+      <in>shmem.c</in>
+      <in>sigframe.c</in>
+      <in>signalfd.c</in>
+      <in>sk-inet.c</in>
+      <in>sk-netlink.c</in>
+      <in>sk-packet.c</in>
+      <in>sk-queue.c</in>
+      <in>sk-tcp.c</in>
+      <in>sk-unix.c</in>
+      <in>sockets.c</in>
+      <in>stats.c</in>
+      <in>string.c</in>
+      <in>sysctl.c</in>
+      <in>sysfs_parse.c</in>
+      <in>timerfd.c</in>
+      <in>tty.c</in>
+      <in>tun.c</in>
+      <in>util.c</in>
+      <in>uts_ns.c</in>
+    </df>
+    <logicalFolder name="ExternalFiles"
+                   displayName="Important Files"
+                   projectFiles="false"
+                   kind="IMPORTANT_FILES_FOLDER">
+      <itemPath>Makefile</itemPath>
+    </logicalFolder>
+  </logicalFolder>
+  <sourceFolderFilter>^(nbproject)$</sourceFolderFilter>
+  <sourceRootList>
+    <Elem>.</Elem>
+  </sourceRootList>
+  <projectmakefile>Makefile</projectmakefile>
+  <confs>
+    <conf name="Default" type="0">
+      <toolsSet>
+        <compilerSet>default</compilerSet>
+        <dependencyChecking>false</dependencyChecking>
+        <rebuildPropChanged>false</rebuildPropChanged>
+      </toolsSet>
+      <flagsDictionary>
+        <element flagsID="0" commonFlags="-O2"/>
+        <element flagsID="1" commonFlags="-O2 -fPIC"/>
+        <element flagsID="2" commonFlags="-O2 -fpie"/>
+      </flagsDictionary>
+      <codeAssistance>
+      </codeAssistance>
+      <makefileType>
+        <makeTool>
+          <buildCommandWorkingDir>.</buildCommandWorkingDir>
+          <buildCommand>${MAKE} -f Makefile</buildCommand>
+          <cleanCommand>${MAKE} -f Makefile clean</cleanCommand>
+          <executablePath></executablePath>
+          <cTool>
+            <preprocessorList>
+              <Elem>CONFIG_HAS_LIBBSD</Elem>
+              <Elem>CONFIG_X86_64</Elem>
+              <Elem>_FILE_OFFSET_BITS=64</Elem>
+              <Elem>_GNU_SOURCE</Elem>
+            </preprocessorList>
+          </cTool>
+        </makeTool>
+      </makefileType>
+      <item path="action-scripts.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="aio.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="arch/x86/cpu.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="arch/x86/crtools.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="arch/x86/prlimit.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="arch/x86/restorer.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="2">
+          <preprocessorList>
+            <Elem>CR_NOGLIBC</Elem>
+          </preprocessorList>
+        </cTool>
+      </item>
+      <item path="arch/x86/vdso-pie.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="2">
+          <preprocessorList>
+            <Elem>CR_NOGLIBC</Elem>
+          </preprocessorList>
+        </cTool>
+      </item>
+      <item path="arch/x86/vdso.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="bfd.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="cgroup.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="cr-check.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="cr-dedup.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="cr-dump.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="cr-errno.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="cr-exec.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="cr-restore.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="cr-service.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="cr-show.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="crtools.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="eventfd.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="eventpoll.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <folder path="0/arch">
+        <cTool>
+          <incDir>
+            <pElem>.</pElem>
+          </incDir>
+        </cTool>
+      </folder>
+      <folder path="0/lib">
+        <cTool>
+          <incDir>
+            <pElem>.</pElem>
+          </incDir>
+        </cTool>
+      </folder>
+      <folder path="0/pie">
+        <cTool>
+          <incDir>
+            <pElem>.</pElem>
+          </incDir>
+        </cTool>
+      </folder>
+      <folder path="0/protobuf">
+        <cTool>
+          <incDir>
+            <pElem>protobuf</pElem>
+            <pElem>.</pElem>
+          </incDir>
+        </cTool>
+      </folder>
+      <item path="fifo.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="file-ids.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="file-lock.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="files-ext.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="files-reg.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="files.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="fsnotify.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="image-desc.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="image.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="ipc_ns.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="irmap.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="kcmp-ids.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="kerndat.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="lib/criu.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="1">
+        </cTool>
+      </item>
+      <item path="libnetlink.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="log.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="lsm.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="mem.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="mount.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="namespaces.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="net.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="netfilter.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="page-pipe.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="page-read.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="page-xfer.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="pagemap-cache.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="parasite-syscall.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="pie/log-simple.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="2">
+          <preprocessorList>
+            <Elem>CR_NOGLIBC</Elem>
+          </preprocessorList>
+        </cTool>
+      </item>
+      <item path="pie/parasite.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="2">
+          <preprocessorList>
+            <Elem>CR_NOGLIBC</Elem>
+          </preprocessorList>
+        </cTool>
+      </item>
+      <item path="pie/pie-relocs.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="pie/piegen/elf-x86-32.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="pie/piegen/elf-x86-64.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="pie/piegen/main.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="pie/restorer.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="2">
+          <preprocessorList>
+            <Elem>CR_NOGLIBC</Elem>
+          </preprocessorList>
+        </cTool>
+      </item>
+      <item path="pie/util-fd.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="2">
+          <preprocessorList>
+            <Elem>CR_NOGLIBC</Elem>
+          </preprocessorList>
+        </cTool>
+      </item>
+      <item path="pie/util.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="2">
+          <preprocessorList>
+            <Elem>CR_NOGLIBC</Elem>
+          </preprocessorList>
+        </cTool>
+      </item>
+      <item path="pipes.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="plugin.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="proc_parse.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf-desc.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/cgroup.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/core-aarch64.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/core-arm.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/core-ppc64.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/core-x86.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/core.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/cpuinfo.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/creds.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/eventfd.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/eventpoll.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/ext-file.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/fdinfo.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/fh.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/fifo.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/file-lock.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/fown.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/fs.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/fsnotify.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/ghost-file.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/google/protobuf/descriptor.pb-c.c"
+            ex="false"
+            tool="0"
+            flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/inventory.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/ipc-desc.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/ipc-msg.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/ipc-sem.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/ipc-shm.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/ipc-var.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/mm.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/mnt.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/netdev.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/ns.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/opts.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/packet-sock.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/pagemap.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/pipe-data.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/pipe.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/pstree.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/regfile.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/remap-file-path.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/rlimit.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/rpc.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/sa.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/siginfo.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/signalfd.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/sk-inet.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/sk-netlink.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/sk-opts.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/sk-packet.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/sk-unix.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/stats.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/tcp-stream.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/timer.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/timerfd.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/tty.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/tun.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/userns.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/utsns.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="protobuf/vma.pb-c.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="pstree.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="ptrace.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="rbtree.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="rst-malloc.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="sd-daemon.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="security.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="shmem.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="sigframe.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="signalfd.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="sk-inet.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="sk-netlink.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="sk-packet.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="sk-queue.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="sk-tcp.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="sk-unix.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="sockets.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="stats.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="string.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="sysctl.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="sysfs_parse.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="timerfd.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="tty.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="tun.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="util.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+      <item path="uts_ns.c" ex="false" tool="0" flavor2="0">
+        <cTool flags="0">
+        </cTool>
+      </item>
+    </conf>
+  </confs>
+</configurationDescriptor>

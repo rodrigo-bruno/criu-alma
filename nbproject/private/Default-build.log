@@ -1,0 +1,435 @@
+  GEN      include/config.h
+make[1]: Entering directory `/home/underscore/git/criu'
+  PBCC     protobuf/google/protobuf/descriptor.pb-c.c
+  PBCC     protobuf/opts.pb-c.c
+  DEP      protobuf/google/protobuf/descriptor.pb-c.d
+  DEP      protobuf/opts.pb-c.d
+  PBCC     protobuf/userns.pb-c.c
+  DEP      protobuf/userns.pb-c.d
+  PBCC     protobuf/cgroup.pb-c.c
+  DEP      protobuf/cgroup.pb-c.d
+  PBCC     protobuf/fown.pb-c.c
+  PBCC     protobuf/ext-file.pb-c.c
+  DEP      protobuf/fown.pb-c.d
+  DEP      protobuf/ext-file.pb-c.d
+  PBCC     protobuf/rpc.pb-c.c
+  DEP      protobuf/rpc.pb-c.d
+  PBCC     protobuf/siginfo.pb-c.c
+  DEP      protobuf/siginfo.pb-c.d
+  PBCC     protobuf/pagemap.pb-c.c
+  DEP      protobuf/pagemap.pb-c.d
+  PBCC     protobuf/rlimit.pb-c.c
+  DEP      protobuf/rlimit.pb-c.d
+  PBCC     protobuf/file-lock.pb-c.c
+  DEP      protobuf/file-lock.pb-c.d
+  PBCC     protobuf/tty.pb-c.c
+  DEP      protobuf/tty.pb-c.d
+  PBCC     protobuf/tun.pb-c.c
+  PBCC     protobuf/netdev.pb-c.c
+  DEP      protobuf/tun.pb-c.d
+  DEP      protobuf/netdev.pb-c.d
+  PBCC     protobuf/vma.pb-c.c
+  DEP      protobuf/vma.pb-c.d
+  PBCC     protobuf/creds.pb-c.c
+  DEP      protobuf/creds.pb-c.d
+  PBCC     protobuf/utsns.pb-c.c
+  DEP      protobuf/utsns.pb-c.d
+  PBCC     protobuf/ipc-desc.pb-c.c
+  PBCC     protobuf/ipc-sem.pb-c.c
+  DEP      protobuf/ipc-desc.pb-c.d
+  DEP      protobuf/ipc-sem.pb-c.d
+  PBCC     protobuf/ipc-msg.pb-c.c
+  DEP      protobuf/ipc-msg.pb-c.d
+  PBCC     protobuf/ipc-shm.pb-c.c
+  DEP      protobuf/ipc-shm.pb-c.d
+  PBCC     protobuf/ipc-var.pb-c.c
+  DEP      protobuf/ipc-var.pb-c.d
+  PBCC     protobuf/sk-opts.pb-c.c
+  PBCC     protobuf/packet-sock.pb-c.c
+  DEP      protobuf/sk-opts.pb-c.d
+  DEP      protobuf/packet-sock.pb-c.d
+  PBCC     protobuf/sk-netlink.pb-c.c
+  DEP      protobuf/sk-netlink.pb-c.d
+  PBCC     protobuf/sk-inet.pb-c.c
+  DEP      protobuf/sk-inet.pb-c.d
+  PBCC     protobuf/sk-unix.pb-c.c
+  DEP      protobuf/sk-unix.pb-c.d
+  PBCC     protobuf/mm.pb-c.c
+  DEP      protobuf/mm.pb-c.d
+  PBCC     protobuf/timerfd.pb-c.c
+  DEP      protobuf/timerfd.pb-c.d
+  PBCC     protobuf/timer.pb-c.c
+  DEP      protobuf/timer.pb-c.d
+  PBCC     protobuf/sa.pb-c.c
+  DEP      protobuf/sa.pb-c.d
+  PBCC     protobuf/pipe-data.pb-c.c
+  DEP      protobuf/pipe-data.pb-c.d
+  PBCC     protobuf/mnt.pb-c.c
+  DEP      protobuf/mnt.pb-c.d
+  PBCC     protobuf/sk-packet.pb-c.c
+  DEP      protobuf/sk-packet.pb-c.d
+  PBCC     protobuf/tcp-stream.pb-c.c
+  DEP      protobuf/tcp-stream.pb-c.d
+  PBCC     protobuf/pipe.pb-c.c
+  DEP      protobuf/pipe.pb-c.d
+  PBCC     protobuf/pstree.pb-c.c
+  DEP      protobuf/pstree.pb-c.d
+  PBCC     protobuf/fs.pb-c.c
+  DEP      protobuf/fs.pb-c.d
+  PBCC     protobuf/signalfd.pb-c.c
+  DEP      protobuf/signalfd.pb-c.d
+  PBCC     protobuf/fh.pb-c.c
+  PBCC     protobuf/fsnotify.pb-c.c
+  DEP      protobuf/fh.pb-c.d
+  DEP      protobuf/fsnotify.pb-c.d
+  PBCC     protobuf/eventpoll.pb-c.c
+  DEP      protobuf/eventpoll.pb-c.d
+  PBCC     protobuf/eventfd.pb-c.c
+  DEP      protobuf/eventfd.pb-c.d
+  PBCC     protobuf/remap-file-path.pb-c.c
+  DEP      protobuf/remap-file-path.pb-c.d
+  PBCC     protobuf/fifo.pb-c.c
+  DEP      protobuf/fifo.pb-c.d
+  PBCC     protobuf/ghost-file.pb-c.c
+  DEP      protobuf/ghost-file.pb-c.d
+  PBCC     protobuf/regfile.pb-c.c
+  DEP      protobuf/regfile.pb-c.d
+  PBCC     protobuf/ns.pb-c.c
+  DEP      protobuf/ns.pb-c.d
+  PBCC     protobuf/fdinfo.pb-c.c
+  DEP      protobuf/fdinfo.pb-c.d
+  PBCC     protobuf/core-aarch64.pb-c.c
+  PBCC     protobuf/core-arm.pb-c.c
+  PBCC     protobuf/core-ppc64.pb-c.c
+  PBCC     protobuf/core-x86.pb-c.c
+  PBCC     protobuf/core.pb-c.c
+  PBCC     protobuf/inventory.pb-c.c
+  DEP      protobuf/core-aarch64.pb-c.d
+  DEP      protobuf/core-arm.pb-c.d
+  DEP      protobuf/core-ppc64.pb-c.d
+  DEP      protobuf/core-x86.pb-c.d
+  DEP      protobuf/core.pb-c.d
+  DEP      protobuf/inventory.pb-c.d
+  PBCC     protobuf/cpuinfo.pb-c.c
+  DEP      protobuf/cpuinfo.pb-c.d
+  PBCC     protobuf/stats.pb-c.c
+  DEP      protobuf/stats.pb-c.d
+make[1]: Leaving directory `/home/underscore/git/criu'
+make[1]: Entering directory `/home/underscore/git/criu'
+  CC       protobuf/stats.o
+  CC       protobuf/core.o
+  CC       protobuf/core-x86.o
+  CC       protobuf/core-arm.o
+  CC       protobuf/core-aarch64.o
+  CC       protobuf/core-ppc64.o
+  CC       protobuf/cpuinfo.o
+  CC       protobuf/inventory.o
+  CC       protobuf/fdinfo.o
+  CC       protobuf/fown.o
+  CC       protobuf/ns.o
+  CC       protobuf/regfile.o
+  CC       protobuf/ghost-file.o
+  CC       protobuf/fifo.o
+  CC       protobuf/remap-file-path.o
+  CC       protobuf/eventfd.o
+  CC       protobuf/eventpoll.o
+  CC       protobuf/fh.o
+  CC       protobuf/fsnotify.o
+  CC       protobuf/signalfd.o
+  CC       protobuf/fs.o
+  CC       protobuf/pstree.o
+  CC       protobuf/pipe.o
+  CC       protobuf/tcp-stream.o
+  CC       protobuf/sk-packet.o
+  CC       protobuf/mnt.o
+  CC       protobuf/pipe-data.o
+  CC       protobuf/sa.o
+  CC       protobuf/timer.o
+  CC       protobuf/timerfd.o
+  CC       protobuf/mm.o
+  CC       protobuf/sk-opts.o
+  CC       protobuf/sk-unix.o
+  CC       protobuf/sk-inet.o
+  CC       protobuf/tun.o
+  CC       protobuf/sk-netlink.o
+  CC       protobuf/packet-sock.o
+  CC       protobuf/ipc-var.o
+  CC       protobuf/ipc-desc.o
+  CC       protobuf/ipc-shm.o
+  CC       protobuf/ipc-msg.o
+  CC       protobuf/ipc-sem.o
+  CC       protobuf/utsns.o
+  CC       protobuf/creds.o
+  CC       protobuf/vma.o
+  CC       protobuf/netdev.o
+  CC       protobuf/tty.o
+  CC       protobuf/file-lock.o
+  CC       protobuf/rlimit.o
+  CC       protobuf/pagemap.o
+  CC       protobuf/siginfo.o
+  CC       protobuf/rpc.o
+  CC       protobuf/ext-file.o
+  CC       protobuf/cgroup.o
+  CC       protobuf/userns.o
+  CC       protobuf/google/protobuf/descriptor.o
+  CC       protobuf/opts.o
+  LINK     protobuf/built-in.o
+make[1]: Leaving directory `/home/underscore/git/criu'
+make[1]: Entering directory `/home/underscore/git/criu'
+  GEN      arch/x86/../../include/syscall-codes.h
+  GEN      arch/x86/../../include/syscall.h
+  GEN      arch/x86/syscalls.S
+  DEP      arch/x86/prlimit.d
+  DEP      arch/x86/cpu.d
+  DEP      arch/x86/crtools.d
+make[1]: Leaving directory `/home/underscore/git/criu'
+make[1]: Entering directory `/home/underscore/git/criu'
+  GEN      arch/x86/sys-exec-tbl.c
+  CC       arch/x86/syscalls.o
+  LINK     arch/x86/syscalls.built-in.o
+  CC       arch/x86/crtools.o
+  CC       arch/x86/cpu.o
+  CC       arch/x86/prlimit.o
+  LINK     arch/x86/crtools.built-in.o
+make[1]: Leaving directory `/home/underscore/git/criu'
+make[1]: Entering directory `/home/underscore/git/criu'
+  DEP      pie/piegen/elf-x86-64.d
+  DEP      pie/piegen/elf-x86-32.d
+  DEP      pie/piegen/main.d
+make[1]: Leaving directory `/home/underscore/git/criu'
+make[1]: Entering directory `/home/underscore/git/criu'
+  CC       pie/piegen/main.o
+  CC       pie/piegen/elf-x86-32.o
+  CC       pie/piegen/elf-x86-64.o
+  LINK     pie/piegen/built-in.o
+make[1]: Leaving directory `/home/underscore/git/criu'
+  LINK     pie/piegen/piegen
+make[1]: Entering directory `/home/underscore/git/criu'
+  DEP      arch/x86/restorer.d
+  DEP      pie/restorer.d
+  DEP      arch/x86/parasite-head.d
+  DEP      pie/parasite.d
+  DEP      arch/x86/vdso-pie.d
+  DEP      pie/util-fd.d
+  DEP      pie/util.d
+  DEP      pie/log-simple.d
+make[1]: Leaving directory `/home/underscore/git/criu'
+make[1]: Entering directory `/home/underscore/git/criu'
+  CC       pie/parasite.o
+  CC       arch/x86/parasite-head.o
+  CC       pie/log-simple.o
+  CC       pie/util.o
+  CC       pie/util-fd.o
+  CC       arch/x86/vdso-pie.o
+  LINK     pie/parasite.built-in.o
+  GEN      pie/pie.lds.S
+  GEN      pie/parasite.built-in.bin.o
+  GEN      pie/parasite-blob.h
+  CC       pie/restorer.o
+  CC       arch/x86/restorer.o
+  LINK     pie/restorer.built-in.o
+  GEN      pie/restorer.built-in.bin.o
+  GEN      pie/restorer-blob.h
+make[1]: Leaving directory `/home/underscore/git/criu'
+  GEN      include/version.h
+make[1]: Entering directory `/home/underscore/git/criu'
+  DEP      pie/pie-relocs.d
+  DEP      cr-errno.d
+  DEP      plugin.d
+  DEP      sd-daemon.d
+  DEP      cr-service.d
+  DEP      arch/x86/vdso.d
+  DEP      lsm.d
+  DEP      sigframe.d
+  DEP      string.d
+  DEP      aio.d
+  DEP      timerfd.d
+  DEP      cgroup.d
+  DEP      stats.d
+  DEP      kerndat.d
+  DEP      pagemap-cache.d
+  DEP      page-read.d
+  DEP      page-xfer.d
+  DEP      page-pipe.d
+  DEP      file-lock.d
+  DEP      cr-exec.d
+  DEP      tty.d
+  GEN      protobuf-desc-gen.h
+  DEP      protobuf-desc.d
+  DEP      protobuf.d
+  DEP      pstree.d
+  DEP      signalfd.d
+  DEP      irmap.d
+  DEP      fsnotify.d
+  DEP      mount.d
+  DEP      eventpoll.d
+  DEP      eventfd.d
+  DEP      shmem.d
+  DEP      netfilter.d
+  DEP      ipc_ns.d
+  DEP      uts_ns.d
+  DEP      namespaces.d
+  DEP      file-ids.d
+  DEP      fifo.d
+  DEP      pipes.d
+  DEP      files-ext.d
+  DEP      files-reg.d
+  DEP      files.d
+  DEP      sk-queue.d
+  DEP      sk-netlink.d
+  DEP      sk-packet.d
+  DEP      sk-unix.d
+  DEP      sk-tcp.d
+  DEP      sk-inet.d
+  DEP      sockets.d
+  DEP      libnetlink.d
+  DEP      log.d
+  DEP      rbtree.d
+  DEP      kcmp-ids.d
+  DEP      ptrace.d
+  DEP      sysctl.d
+  DEP      action-scripts.d
+  DEP      bfd.d
+  DEP      util.d
+  DEP      cr-dedup.d
+  DEP      cr-check.d
+  DEP      cr-show.d
+  DEP      cr-dump.d
+  DEP      sysfs_parse.d
+  DEP      proc_parse.d
+  DEP      tun.d
+  DEP      net.d
+  DEP      image-desc.d
+  DEP      image.d
+  DEP      security.d
+  DEP      crtools.d
+  DEP      cr-restore.d
+  DEP      rst-malloc.d
+  DEP      mem.d
+  DEP      parasite-syscall.d
+make[1]: Leaving directory `/home/underscore/git/criu'
+make[1]: Entering directory `/home/underscore/git/criu'
+  CC       parasite-syscall.o
+  CC       mem.o
+  CC       rst-malloc.o
+  CC       cr-restore.o
+  CC       crtools.o
+  CC       security.o
+  CC       image.o
+  CC       image-desc.o
+  CC       net.o
+  CC       tun.o
+  CC       proc_parse.o
+  CC       sysfs_parse.o
+  CC       cr-dump.o
+  CC       cr-show.o
+  CC       cr-check.o
+  CC       cr-dedup.o
+  CC       util.o
+  CC       bfd.o
+  CC       action-scripts.o
+  CC       sysctl.o
+  CC       ptrace.o
+  CC       kcmp-ids.o
+  CC       rbtree.o
+  CC       log.o
+  CC       libnetlink.o
+  CC       sockets.o
+  CC       sk-inet.o
+  CC       sk-tcp.o
+  CC       sk-unix.o
+  CC       sk-packet.o
+  CC       sk-netlink.o
+  CC       sk-queue.o
+  CC       files.o
+  CC       files-reg.o
+  CC       files-ext.o
+  CC       pipes.o
+  CC       fifo.o
+  CC       file-ids.o
+  CC       namespaces.o
+  CC       uts_ns.o
+  CC       ipc_ns.o
+  CC       netfilter.o
+  CC       shmem.o
+  CC       eventfd.o
+  CC       eventpoll.o
+  CC       mount.o
+  CC       fsnotify.o
+  CC       irmap.o
+  CC       signalfd.o
+  CC       pstree.o
+  CC       protobuf.o
+  CC       protobuf-desc.o
+  CC       tty.o
+  CC       cr-exec.o
+  CC       file-lock.o
+  CC       page-pipe.o
+  CC       page-xfer.o
+  CC       page-read.o
+  CC       pagemap-cache.o
+  CC       kerndat.o
+  CC       stats.o
+  CC       cgroup.o
+  CC       timerfd.o
+  CC       aio.o
+  CC       string.o
+  CC       sigframe.o
+  CC       lsm.o
+  CC       arch/x86/vdso.o
+  CC       cr-service.o
+  CC       sd-daemon.o
+  CC       plugin.o
+  CC       cr-errno.o
+  CC       pie/pie-relocs.o
+  LINK     built-in.o
+make[1]: Leaving directory `/home/underscore/git/criu'
+make[1]: Entering directory `/home/underscore/git/criu'
+  DEP      lib/rpc.pb-c.d
+  DEP      lib/criu.d
+make[1]: Leaving directory `/home/underscore/git/criu'
+make[1]: Entering directory `/home/underscore/git/criu'
+  CC       lib/criu.o
+  CC       lib/rpc.pb-c.o
+  LINK     lib/libcriu.so
+make[1]: Leaving directory `/home/underscore/git/criu'
+make[1]: Entering directory `/home/underscore/git/criu'
+make[2]: Entering directory `/home/underscore/git/criu'
+make[2]: Leaving directory `/home/underscore/git/criu'
+make[2]: Entering directory `/home/underscore/git/criu'
+make[2]: `arch/x86/syscalls.built-in.o' is up to date.
+make[2]: Leaving directory `/home/underscore/git/criu'
+make[2]: Entering directory `/home/underscore/git/criu'
+make[2]: `arch/x86/crtools.built-in.o' is up to date.
+make[2]: Leaving directory `/home/underscore/git/criu'
+make[2]: Entering directory `/home/underscore/git/criu'
+make[2]: Leaving directory `/home/underscore/git/criu'
+make[2]: Entering directory `/home/underscore/git/criu'
+make[2]: `pie/piegen/built-in.o' is up to date.
+make[2]: Leaving directory `/home/underscore/git/criu'
+make[2]: Entering directory `/home/underscore/git/criu'
+make[2]: Leaving directory `/home/underscore/git/criu'
+make[2]: Entering directory `/home/underscore/git/criu'
+make[2]: `arch/x86/vdso-pie.o' is up to date.
+make[2]: Leaving directory `/home/underscore/git/criu'
+make[2]: Entering directory `/home/underscore/git/criu'
+make[2]: `pie/util-fd.o' is up to date.
+make[2]: Leaving directory `/home/underscore/git/criu'
+make[2]: Entering directory `/home/underscore/git/criu'
+make[2]: `pie/util.o' is up to date.
+make[2]: Leaving directory `/home/underscore/git/criu'
+make[2]: Entering directory `/home/underscore/git/criu'
+make[2]: `protobuf/built-in.o' is up to date.
+make[2]: Leaving directory `/home/underscore/git/criu'
+make[2]: Entering directory `/home/underscore/git/criu'
+make[2]: `built-in.o' is up to date.
+make[2]: Leaving directory `/home/underscore/git/criu'
+  LINK     criu
+make[1]: Leaving directory `/home/underscore/git/criu'
+make[1]: Entering directory `/home/underscore/git/criu'
+make[2]: Entering directory `/home/underscore/git/criu/pycriu'
+make[3]: Entering directory `/home/underscore/git/criu/pycriu/images'
+  GEN   magic.py
+make[3]: Leaving directory `/home/underscore/git/criu/pycriu/images'
+make[2]: Leaving directory `/home/underscore/git/criu/pycriu'
+make[1]: Leaving directory `/home/underscore/git/criu'

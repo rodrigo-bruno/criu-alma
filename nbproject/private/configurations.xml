@@ -1,0 +1,894 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configurationDescriptor version="95">
+  <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
+    <df root="." name="0">
+      <df name="arch">
+        <df name="aarch64">
+          <df name="include">
+            <df name="asm">
+              <in>atomic.h</in>
+              <in>bitops.h</in>
+              <in>bitsperlong.h</in>
+              <in>cpu.h</in>
+              <in>dump.h</in>
+              <in>fpu.h</in>
+              <in>int.h</in>
+              <in>linkage.h</in>
+              <in>page.h</in>
+              <in>parasite-syscall.h</in>
+              <in>parasite.h</in>
+              <in>processor-flags.h</in>
+              <in>restore.h</in>
+              <in>restorer.h</in>
+              <in>string.h</in>
+              <in>syscall-aux.S</in>
+              <in>syscall-aux.h</in>
+              <in>types.h</in>
+              <in>vdso.h</in>
+            </df>
+          </df>
+          <in>cpu.c</in>
+          <in>crtools.c</in>
+          <in>intraprocedure.S</in>
+          <in>parasite-head.S</in>
+          <in>restorer.c</in>
+          <in>syscall-common.S</in>
+          <in>vdso-pie.c</in>
+          <in>vdso.c</in>
+        </df>
+        <df name="arm">
+          <df name="include">
+            <df name="asm">
+              <in>atomic.h</in>
+              <in>bitops.h</in>
+              <in>bitsperlong.h</in>
+              <in>cpu.h</in>
+              <in>dump.h</in>
+              <in>fpu.h</in>
+              <in>int.h</in>
+              <in>linkage.h</in>
+              <in>page.h</in>
+              <in>parasite-syscall.h</in>
+              <in>parasite.h</in>
+              <in>processor-flags.h</in>
+              <in>processor.h</in>
+              <in>restore.h</in>
+              <in>restorer.h</in>
+              <in>string.h</in>
+              <in>syscall-aux.S</in>
+              <in>syscall-aux.h</in>
+              <in>types.h</in>
+            </df>
+          </df>
+          <in>cpu.c</in>
+          <in>crtools.c</in>
+          <in>parasite-head.S</in>
+          <in>restorer.c</in>
+          <in>syscall-common.S</in>
+          <in>uidiv.S</in>
+        </df>
+        <df name="ppc64">
+          <df name="include">
+            <df name="asm">
+              <in>atomic.h</in>
+              <in>bitops.h</in>
+              <in>bitsperlong.h</in>
+              <in>cmpxchg.h</in>
+              <in>cpu.h</in>
+              <in>dump.h</in>
+              <in>fpu.h</in>
+              <in>int.h</in>
+              <in>linkage.h</in>
+              <in>page.h</in>
+              <in>parasite-syscall.h</in>
+              <in>parasite.h</in>
+              <in>prlimit.h</in>
+              <in>processor-flags.h</in>
+              <in>restore.h</in>
+              <in>restorer.h</in>
+              <in>string.h</in>
+              <in>types.h</in>
+              <in>vdso.h</in>
+            </df>
+          </df>
+          <in>cpu.c</in>
+          <in>crtools.c</in>
+          <in>memcmp_64.S</in>
+          <in>memcpy_power7.S</in>
+          <in>misc.S</in>
+          <in>parasite-head.S</in>
+          <in>restorer.c</in>
+          <in>syscall-common-ppc64.S</in>
+          <in>vdso-pie.c</in>
+          <in>vdso-trampoline.S</in>
+          <in>vdso.c</in>
+        </df>
+        <df name="scripts">
+          <df name="arm">
+          </df>
+        </df>
+        <df name="x86">
+          <df name="include">
+            <df name="asm">
+              <in>atomic.h</in>
+              <in>bitops.h</in>
+              <in>bitsperlong.h</in>
+              <in>cmpxchg.h</in>
+              <in>cpu.h</in>
+              <in>dump.h</in>
+              <in>fpu.h</in>
+              <in>int.h</in>
+              <in>linkage.h</in>
+              <in>page.h</in>
+              <in>parasite-syscall.h</in>
+              <in>parasite.h</in>
+              <in>prlimit.h</in>
+              <in>processor-flags.h</in>
+              <in>restore.h</in>
+              <in>restorer.h</in>
+              <in>string.h</in>
+              <in>syscall32.h</in>
+              <in>types.h</in>
+              <in>vdso.h</in>
+            </df>
+          </df>
+          <df name="syscalls">
+            <in>syscall-common-x86-32.S</in>
+            <in>syscall-common-x86-64.S</in>
+            <in>syscall32.c</in>
+          </df>
+          <in>cpu.c</in>
+          <in>crtools.c</in>
+          <in>parasite-head.S</in>
+          <in>prlimit.c</in>
+          <in>restorer.c</in>
+          <in>sys-exec-tbl.c</in>
+          <in>syscalls.S</in>
+          <in>vdso-pie.c</in>
+          <in>vdso.c</in>
+        </df>
+      </df>
+      <df name="build">
+        <df name="lib.linux-x86_64-2.7">
+          <df name="pycriu">
+            <df name="images">
+            </df>
+          </df>
+        </df>
+        <df name="scripts-2.7">
+        </df>
+      </df>
+      <df name="contrib">
+      </df>
+      <df name="Documentation">
+      </df>
+      <df name="include">
+        <df name="asm-generic">
+          <in>bitops.h</in>
+          <in>int.h</in>
+          <in>string.h</in>
+        </df>
+        <in>action-scripts.h</in>
+        <in>aio.h</in>
+        <in>bfd.h</in>
+        <in>bug.h</in>
+        <in>cgroup.h</in>
+        <in>compiler.h</in>
+        <in>config-base.h</in>
+        <in>config.h</in>
+        <in>cpu.h</in>
+        <in>cr-errno.h</in>
+        <in>cr-service-const.h</in>
+        <in>cr-service.h</in>
+        <in>cr-show.h</in>
+        <in>cr_options.h</in>
+        <in>criu-log.h</in>
+        <in>criu-plugin.h</in>
+        <in>crtools.h</in>
+        <in>err.h</in>
+        <in>errno.h</in>
+        <in>eventfd.h</in>
+        <in>eventpoll.h</in>
+        <in>fcntl.h</in>
+        <in>fifo.h</in>
+        <in>file-ids.h</in>
+        <in>file-lock.h</in>
+        <in>files-reg.h</in>
+        <in>files.h</in>
+        <in>fs-magic.h</in>
+        <in>fsnotify.h</in>
+        <in>image-desc.h</in>
+        <in>image.h</in>
+        <in>imgset.h</in>
+        <in>inet_diag.h</in>
+        <in>ipc_ns.h</in>
+        <in>irmap.h</in>
+        <in>kcmp-ids.h</in>
+        <in>kcmp.h</in>
+        <in>kerndat.h</in>
+        <in>libnetlink.h</in>
+        <in>list.h</in>
+        <in>lock.h</in>
+        <in>log.h</in>
+        <in>lsm.h</in>
+        <in>magic.h</in>
+        <in>mem.h</in>
+        <in>mman.h</in>
+        <in>mount.h</in>
+        <in>namespaces.h</in>
+        <in>net.h</in>
+        <in>netfilter.h</in>
+        <in>netlink_diag.h</in>
+        <in>packet_diag.h</in>
+        <in>page-pipe.h</in>
+        <in>page-read.h</in>
+        <in>page-xfer.h</in>
+        <in>pagemap-cache.h</in>
+        <in>parasite-syscall.h</in>
+        <in>parasite.h</in>
+        <in>pid.h</in>
+        <in>pipes.h</in>
+        <in>plugin.h</in>
+        <in>posix-timer.h</in>
+        <in>prctl.h</in>
+        <in>proc_parse.h</in>
+        <in>protobuf-desc.h</in>
+        <in>protobuf.h</in>
+        <in>pstree.h</in>
+        <in>ptrace.h</in>
+        <in>rbtree.h</in>
+        <in>restorer.h</in>
+        <in>rst-malloc.h</in>
+        <in>rst_info.h</in>
+        <in>security.h</in>
+        <in>servicefd.h</in>
+        <in>setproctitle.h</in>
+        <in>shmem.h</in>
+        <in>sigframe.h</in>
+        <in>signalfd.h</in>
+        <in>sk-inet.h</in>
+        <in>sk-packet.h</in>
+        <in>sk-queue.h</in>
+        <in>sockets.h</in>
+        <in>stats.h</in>
+        <in>string.h</in>
+        <in>syscall-codes.h</in>
+        <in>syscall-types.h</in>
+        <in>syscall.h</in>
+        <in>sysctl.h</in>
+        <in>sysfs_parse.h</in>
+        <in>timerfd.h</in>
+        <in>tty.h</in>
+        <in>tun.h</in>
+        <in>unix_diag.h</in>
+        <in>util-pie.h</in>
+        <in>util.h</in>
+        <in>uts_ns.h</in>
+        <in>vdso.h</in>
+        <in>version.h</in>
+        <in>vma.h</in>
+        <in>xmalloc.h</in>
+      </df>
+      <df name="lib">
+        <in>criu.c</in>
+        <in>criu.h</in>
+      </df>
+      <df name="pie">
+        <df name="piegen">
+          <df name="uapi">
+            <in>types.h</in>
+          </df>
+          <in>elf-ppc64.c</in>
+          <in>elf-x86-32.c</in>
+          <in>elf-x86-64.c</in>
+          <in>elf.c</in>
+          <in>main.c</in>
+          <in>piegen.h</in>
+        </df>
+        <in>log-simple.c</in>
+        <in>parasite-blob.h</in>
+        <in>parasite.c</in>
+        <in>pie-relocs.c</in>
+        <in>pie-relocs.h</in>
+        <in>pie.lds.S</in>
+        <in>restorer-blob.h</in>
+        <in>restorer.c</in>
+        <in>util-fd.c</in>
+        <in>util.c</in>
+      </df>
+      <df name="protobuf">
+        <df name="google">
+          <df name="protobuf">
+            <in>descriptor.pb-c.c</in>
+            <in>descriptor.pb-c.h</in>
+          </df>
+        </df>
+        <in>cgroup.pb-c.c</in>
+        <in>cgroup.pb-c.h</in>
+        <in>core-aarch64.pb-c.c</in>
+        <in>core-aarch64.pb-c.h</in>
+        <in>core-arm.pb-c.c</in>
+        <in>core-arm.pb-c.h</in>
+        <in>core-ppc64.pb-c.c</in>
+        <in>core-ppc64.pb-c.h</in>
+        <in>core-x86.pb-c.c</in>
+        <in>core-x86.pb-c.h</in>
+        <in>core.pb-c.c</in>
+        <in>core.pb-c.h</in>
+        <in>cpuinfo.pb-c.c</in>
+        <in>cpuinfo.pb-c.h</in>
+        <in>creds.pb-c.c</in>
+        <in>creds.pb-c.h</in>
+        <in>eventfd.pb-c.c</in>
+        <in>eventfd.pb-c.h</in>
+        <in>eventpoll.pb-c.c</in>
+        <in>eventpoll.pb-c.h</in>
+        <in>ext-file.pb-c.c</in>
+        <in>ext-file.pb-c.h</in>
+        <in>fdinfo.pb-c.c</in>
+        <in>fdinfo.pb-c.h</in>
+        <in>fh.pb-c.c</in>
+        <in>fh.pb-c.h</in>
+        <in>fifo.pb-c.c</in>
+        <in>fifo.pb-c.h</in>
+        <in>file-lock.pb-c.c</in>
+        <in>file-lock.pb-c.h</in>
+        <in>fown.pb-c.c</in>
+        <in>fown.pb-c.h</in>
+        <in>fs.pb-c.c</in>
+        <in>fs.pb-c.h</in>
+        <in>fsnotify.pb-c.c</in>
+        <in>fsnotify.pb-c.h</in>
+        <in>ghost-file.pb-c.c</in>
+        <in>ghost-file.pb-c.h</in>
+        <in>inventory.pb-c.c</in>
+        <in>inventory.pb-c.h</in>
+        <in>ipc-desc.pb-c.c</in>
+        <in>ipc-desc.pb-c.h</in>
+        <in>ipc-msg.pb-c.c</in>
+        <in>ipc-msg.pb-c.h</in>
+        <in>ipc-sem.pb-c.c</in>
+        <in>ipc-sem.pb-c.h</in>
+        <in>ipc-shm.pb-c.c</in>
+        <in>ipc-shm.pb-c.h</in>
+        <in>ipc-var.pb-c.c</in>
+        <in>ipc-var.pb-c.h</in>
+        <in>mm.pb-c.c</in>
+        <in>mm.pb-c.h</in>
+        <in>mnt.pb-c.c</in>
+        <in>mnt.pb-c.h</in>
+        <in>netdev.pb-c.c</in>
+        <in>netdev.pb-c.h</in>
+        <in>ns.pb-c.c</in>
+        <in>ns.pb-c.h</in>
+        <in>opts.pb-c.c</in>
+        <in>opts.pb-c.h</in>
+        <in>packet-sock.pb-c.c</in>
+        <in>packet-sock.pb-c.h</in>
+        <in>pagemap.pb-c.c</in>
+        <in>pagemap.pb-c.h</in>
+        <in>pipe-data.pb-c.c</in>
+        <in>pipe-data.pb-c.h</in>
+        <in>pipe.pb-c.c</in>
+        <in>pipe.pb-c.h</in>
+        <in>pstree.pb-c.c</in>
+        <in>pstree.pb-c.h</in>
+        <in>regfile.pb-c.c</in>
+        <in>regfile.pb-c.h</in>
+        <in>remap-file-path.pb-c.c</in>
+        <in>remap-file-path.pb-c.h</in>
+        <in>rlimit.pb-c.c</in>
+        <in>rlimit.pb-c.h</in>
+        <in>rpc.pb-c.c</in>
+        <in>rpc.pb-c.h</in>
+        <in>sa.pb-c.c</in>
+        <in>sa.pb-c.h</in>
+        <in>siginfo.pb-c.c</in>
+        <in>siginfo.pb-c.h</in>
+        <in>signalfd.pb-c.c</in>
+        <in>signalfd.pb-c.h</in>
+        <in>sk-inet.pb-c.c</in>
+        <in>sk-inet.pb-c.h</in>
+        <in>sk-netlink.pb-c.c</in>
+        <in>sk-netlink.pb-c.h</in>
+        <in>sk-opts.pb-c.c</in>
+        <in>sk-opts.pb-c.h</in>
+        <in>sk-packet.pb-c.c</in>
+        <in>sk-packet.pb-c.h</in>
+        <in>sk-unix.pb-c.c</in>
+        <in>sk-unix.pb-c.h</in>
+        <in>stats.pb-c.c</in>
+        <in>stats.pb-c.h</in>
+        <in>tcp-stream.pb-c.c</in>
+        <in>tcp-stream.pb-c.h</in>
+        <in>timer.pb-c.c</in>
+        <in>timer.pb-c.h</in>
+        <in>timerfd.pb-c.c</in>
+        <in>timerfd.pb-c.h</in>
+        <in>tty.pb-c.c</in>
+        <in>tty.pb-c.h</in>
+        <in>tun.pb-c.c</in>
+        <in>tun.pb-c.h</in>
+        <in>userns.pb-c.c</in>
+        <in>userns.pb-c.h</in>
+        <in>utsns.pb-c.c</in>
+        <in>utsns.pb-c.h</in>
+        <in>vma.pb-c.c</in>
+        <in>vma.pb-c.h</in>
+      </df>
+      <df name="pycriu">
+        <df name="images">
+        </df>
+      </df>
+      <df name="scripts">
+        <df name="logrotate.d">
+        </df>
+        <df name="sd">
+        </df>
+      </df>
+      <df name="test">
+        <df name="app-emu">
+          <df name="java">
+            <df name="HelloWorld">
+            </df>
+          </df>
+          <df name="job">
+            <in>job.c</in>
+          </df>
+          <df name="lxc">
+          </df>
+          <df name="make">
+            <in>tmpl.c</in>
+          </df>
+          <df name="screen">
+          </df>
+          <df name="tarbz">
+          </df>
+          <df name="vnc">
+          </df>
+        </df>
+        <df name="bers">
+          <in>bers.c</in>
+        </df>
+        <df name="crit">
+        </df>
+        <df name="ext-links">
+          <in>mvlink.c</in>
+        </df>
+        <df name="fault-injection">
+        </df>
+        <df name="jenkins">
+        </df>
+        <df name="libcriu">
+          <in>lib.c</in>
+          <in>lib.h</in>
+          <in>test_errno.c</in>
+          <in>test_iters.c</in>
+          <in>test_notify.c</in>
+          <in>test_self.c</in>
+          <in>test_sub.c</in>
+        </df>
+        <df name="mem-snap">
+        </df>
+        <df name="mounts">
+          <df name="ext">
+            <in>ext-mount.c</in>
+            <in>ns_init.c</in>
+          </df>
+        </df>
+        <df name="pipes">
+          <in>pipe.c</in>
+        </df>
+        <df name="rpc">
+          <in>test.c</in>
+        </df>
+        <df name="security">
+        </df>
+        <df name="tcp">
+          <in>cln.c</in>
+          <in>srv.c</in>
+        </df>
+        <df name="unix-callback">
+          <df name="lib">
+          </df>
+          <in>syslog-lib.c</in>
+          <in>unix-client.c</in>
+          <in>unix-lib.c</in>
+          <in>unix-server.c</in>
+        </df>
+        <df name="zdtm">
+          <df name="lib">
+            <df name="arch">
+              <df name="aarch64">
+                <df name="include">
+                  <df name="asm">
+                    <in>atomic.h</in>
+                  </df>
+                </df>
+              </df>
+              <df name="arm">
+                <df name="include">
+                  <df name="asm">
+                    <in>atomic.h</in>
+                  </df>
+                </df>
+              </df>
+              <df name="x86">
+                <df name="include">
+                  <df name="asm">
+                    <in>atomic.h</in>
+                  </df>
+                </df>
+              </df>
+            </df>
+            <in>cpuid.h</in>
+            <in>datagen.c</in>
+            <in>lock.c</in>
+            <in>lock.h</in>
+            <in>msg.c</in>
+            <in>ns.c</in>
+            <in>ns.h</in>
+            <in>parseargs.c</in>
+            <in>streamutil.c</in>
+            <in>tcp.c</in>
+            <in>test.c</in>
+            <in>zdtmtst.h</in>
+          </df>
+          <df name="live">
+            <df name="static">
+              <df name="lib">
+              </df>
+              <in>aio00.c</in>
+              <in>apparmor.c</in>
+              <in>arm-neon00.c</in>
+              <in>bind-mount.c</in>
+              <in>busyloop00.c</in>
+              <in>caps00.c</in>
+              <in>cgroup00.c</in>
+              <in>cgroup01.c</in>
+              <in>cgroup02.c</in>
+              <in>child_opened_proc.c</in>
+              <in>chroot-file.c</in>
+              <in>chroot.c</in>
+              <in>clean_mntns.c</in>
+              <in>cmdlinenv00.c</in>
+              <in>console.c</in>
+              <in>cow00.c</in>
+              <in>cow01.c</in>
+              <in>criu-rtc.c</in>
+              <in>cwd00.c</in>
+              <in>cwd01.c</in>
+              <in>cwd02.c</in>
+              <in>deleted_dev.c</in>
+              <in>deleted_unix_sock.c</in>
+              <in>dumpable01.c</in>
+              <in>dumpable02.c</in>
+              <in>env00.c</in>
+              <in>eventfs00.c</in>
+              <in>fanotify00.c</in>
+              <in>fd.c</in>
+              <in>fdt_shared.c</in>
+              <in>fifo-ghost.c</in>
+              <in>fifo-rowo-pair.c</in>
+              <in>fifo.c</in>
+              <in>fifo_ro.c</in>
+              <in>fifo_wronly.c</in>
+              <in>file_append.c</in>
+              <in>file_attr.c</in>
+              <in>file_fown.c</in>
+              <in>file_locks00.c</in>
+              <in>file_locks01.c</in>
+              <in>file_locks02.c</in>
+              <in>file_locks03.c</in>
+              <in>file_locks04.c</in>
+              <in>file_locks05.c</in>
+              <in>file_shared.c</in>
+              <in>fpu00.c</in>
+              <in>fpu01.c</in>
+              <in>futex-rl.c</in>
+              <in>futex.c</in>
+              <in>get_smaps_bits.c</in>
+              <in>groups.c</in>
+              <in>grow_map.c</in>
+              <in>grow_map02.c</in>
+              <in>grow_map03.c</in>
+              <in>inotify00.c</in>
+              <in>inotify_irmap.c</in>
+              <in>inotify_system.c</in>
+              <in>inotify_system_nodel.c</in>
+              <in>ipc_namespace.c</in>
+              <in>jobctl00.c</in>
+              <in>link10.c</in>
+              <in>maps00.c</in>
+              <in>maps01.c</in>
+              <in>maps02.c</in>
+              <in>maps03.c</in>
+              <in>maps04.c</in>
+              <in>maps05.c</in>
+              <in>maps_file_prot.c</in>
+              <in>mem-touch.c</in>
+              <in>mlock_setuid.c</in>
+              <in>mmx00.c</in>
+              <in>mnt_ext_auto.c</in>
+              <in>mnt_ext_master.c</in>
+              <in>mntns_link_ghost.c</in>
+              <in>mntns_link_remap.c</in>
+              <in>mntns_open.c</in>
+              <in>mntns_root_bind.c</in>
+              <in>mntns_rw_ro_rw.c</in>
+              <in>mntns_shared_bind.c</in>
+              <in>mntns_shared_bind02.c</in>
+              <in>mountpoints.c</in>
+              <in>mprotect00.c</in>
+              <in>msgque.c</in>
+              <in>mtime_mmap.c</in>
+              <in>netns-dev.c</in>
+              <in>netns-nf.c</in>
+              <in>netns.c</in>
+              <in>overmount_dev.c</in>
+              <in>overmount_fifo.c</in>
+              <in>overmount_file.c</in>
+              <in>overmount_sock.c</in>
+              <in>packet_sock.c</in>
+              <in>packet_sock_mmap.c</in>
+              <in>pdeath_sig.c</in>
+              <in>pid00.c</in>
+              <in>pipe00.c</in>
+              <in>pipe01.c</in>
+              <in>pipe02.c</in>
+              <in>poll.c</in>
+              <in>posix_timers.c</in>
+              <in>proc-self.c</in>
+              <in>pstree.c</in>
+              <in>pthread00.c</in>
+              <in>pthread01.c</in>
+              <in>pthread02.c</in>
+              <in>ptrace_sig.c</in>
+              <in>pty00.c</in>
+              <in>pty01.c</in>
+              <in>pty02.c</in>
+              <in>pty03.c</in>
+              <in>pty04.c</in>
+              <in>remap_dead_pid.c</in>
+              <in>rlimits00.c</in>
+              <in>rmdir_open.c</in>
+              <in>rtc.c</in>
+              <in>sched_policy00.c</in>
+              <in>sched_prio00.c</in>
+              <in>seccomp_strict.c</in>
+              <in>selfexe00.c</in>
+              <in>sem.c</in>
+              <in>session00.c</in>
+              <in>session01.c</in>
+              <in>session02.c</in>
+              <in>session03.c</in>
+              <in>shm.c</in>
+              <in>sigaltstack.c</in>
+              <in>signalfd00.c</in>
+              <in>sigpending.c</in>
+              <in>sk-netlink.c</in>
+              <in>sk-unix-unconn.c</in>
+              <in>sleeping00.c</in>
+              <in>sock_filter.c</in>
+              <in>sock_opts00.c</in>
+              <in>sock_opts01.c</in>
+              <in>socket-ext.c</in>
+              <in>socket-tcp.c</in>
+              <in>socket-tcp6.c</in>
+              <in>socket-tcpbuf-local.c</in>
+              <in>socket-tcpbuf.c</in>
+              <in>socket-tcpbuf6.c</in>
+              <in>socket6_udp.c</in>
+              <in>socket_aio.c</in>
+              <in>socket_listen.c</in>
+              <in>socket_listen6.c</in>
+              <in>socket_queues.c</in>
+              <in>socket_udp.c</in>
+              <in>socket_udplite.c</in>
+              <in>sockets00.c</in>
+              <in>sockets01.c</in>
+              <in>sockets02.c</in>
+              <in>sockets_dgram.c</in>
+              <in>sockets_spair.c</in>
+              <in>sse00.c</in>
+              <in>sse20.c</in>
+              <in>stopped.c</in>
+              <in>tempfs.c</in>
+              <in>timerfd.c</in>
+              <in>timers.c</in>
+              <in>tty00.c</in>
+              <in>tty02.c</in>
+              <in>tty03.c</in>
+              <in>tun.c</in>
+              <in>umask00.c</in>
+              <in>unbound_sock.c</in>
+              <in>unhashed_proc.c</in>
+              <in>unlink_fifo.c</in>
+              <in>unlink_fifo_wronly.c</in>
+              <in>unlink_fstat00.c</in>
+              <in>unlink_fstat01.c</in>
+              <in>unlink_fstat02.c</in>
+              <in>unlink_fstat03.c</in>
+              <in>unlink_largefile.c</in>
+              <in>unlink_mmap00.c</in>
+              <in>unlink_mmap01.c</in>
+              <in>unlink_mmap02.c</in>
+              <in>uptime_grow.c</in>
+              <in>utsname.c</in>
+              <in>vdso00.c</in>
+              <in>vdso01.c</in>
+              <in>vt.c</in>
+              <in>wait00.c</in>
+              <in>write_read00.c</in>
+              <in>write_read01.c</in>
+              <in>write_read02.c</in>
+              <in>write_read10.c</in>
+              <in>xids00.c</in>
+              <in>zombie00.c</in>
+            </df>
+            <df name="streaming">
+              <in>fifo_dyn.c</in>
+              <in>fifo_loop.c</in>
+              <in>file_aio.c</in>
+              <in>netlink00.c</in>
+              <in>pipe_loop00.c</in>
+              <in>pipe_shared00.c</in>
+              <in>socket-tcp.c</in>
+              <in>socket-tcp6.c</in>
+              <in>socket_loop00.c</in>
+              <in>unix_sock.c</in>
+            </df>
+            <df name="transition">
+              <in>epoll.c</in>
+              <in>file_read.c</in>
+              <in>fork.c</in>
+              <in>fork2.c</in>
+              <in>ipc.c</in>
+              <in>maps007.c</in>
+              <in>ptrace.c</in>
+              <in>thread-bomb.c</in>
+            </df>
+          </df>
+        </df>
+        <in>zdtm_ct.c</in>
+      </df>
+      <df name="usr">
+        <df name="local">
+          <df name="bin">
+          </df>
+          <df name="lib">
+            <df name="python2.7">
+              <df name="dist-packages">
+                <df name="pycriu">
+                  <df name="images">
+                  </df>
+                </df>
+              </df>
+            </df>
+          </df>
+        </df>
+      </df>
+      <in>action-scripts.c</in>
+      <in>aio.c</in>
+      <in>bfd.c</in>
+      <in>cgroup.c</in>
+      <in>cr-check.c</in>
+      <in>cr-dedup.c</in>
+      <in>cr-dump.c</in>
+      <in>cr-errno.c</in>
+      <in>cr-exec.c</in>
+      <in>cr-restore.c</in>
+      <in>cr-service.c</in>
+      <in>cr-show.c</in>
+      <in>crtools.c</in>
+      <in>eventfd.c</in>
+      <in>eventpoll.c</in>
+      <in>fifo.c</in>
+      <in>file-ids.c</in>
+      <in>file-lock.c</in>
+      <in>files-ext.c</in>
+      <in>files-reg.c</in>
+      <in>files.c</in>
+      <in>fsnotify.c</in>
+      <in>image-desc.c</in>
+      <in>image.c</in>
+      <in>ipc_ns.c</in>
+      <in>irmap.c</in>
+      <in>kcmp-ids.c</in>
+      <in>kerndat.c</in>
+      <in>libnetlink.c</in>
+      <in>log.c</in>
+      <in>lsm.c</in>
+      <in>mem.c</in>
+      <in>mount.c</in>
+      <in>namespaces.c</in>
+      <in>net.c</in>
+      <in>netfilter.c</in>
+      <in>page-pipe.c</in>
+      <in>page-read.c</in>
+      <in>page-xfer.c</in>
+      <in>pagemap-cache.c</in>
+      <in>parasite-syscall.c</in>
+      <in>pipes.c</in>
+      <in>plugin.c</in>
+      <in>proc_parse.c</in>
+      <in>protobuf-desc-gen.h</in>
+      <in>protobuf-desc.c</in>
+      <in>protobuf.c</in>
+      <in>pstree.c</in>
+      <in>ptrace.c</in>
+      <in>rbtree.c</in>
+      <in>rst-malloc.c</in>
+      <in>sd-daemon.c</in>
+      <in>sd-daemon.h</in>
+      <in>security.c</in>
+      <in>shmem.c</in>
+      <in>sigframe.c</in>
+      <in>signalfd.c</in>
+      <in>sk-inet.c</in>
+      <in>sk-netlink.c</in>
+      <in>sk-packet.c</in>
+      <in>sk-queue.c</in>
+      <in>sk-tcp.c</in>
+      <in>sk-unix.c</in>
+      <in>sockets.c</in>
+      <in>stats.c</in>
+      <in>string.c</in>
+      <in>sysctl.c</in>
+      <in>sysfs_parse.c</in>
+      <in>timerfd.c</in>
+      <in>tty.c</in>
+      <in>tun.c</in>
+      <in>util.c</in>
+      <in>uts_ns.c</in>
+    </df>
+  </logicalFolder>
+  <projectmakefile>Makefile</projectmakefile>
+  <confs>
+    <conf name="Default" type="0">
+      <toolsSet>
+        <developmentServer>localhost</developmentServer>
+        <platform>2</platform>
+      </toolsSet>
+      <compile>
+        <compiledirpicklist>
+          <compiledirpicklistitem>.</compiledirpicklistitem>
+          <compiledirpicklistitem>${AUTO_FOLDER}</compiledirpicklistitem>
+        </compiledirpicklist>
+        <compiledir>${AUTO_FOLDER}</compiledir>
+        <compilecommandpicklist>
+          <compilecommandpicklistitem>${MAKE} ${ITEM_NAME}.o</compilecommandpicklistitem>
+          <compilecommandpicklistitem>${AUTO_COMPILE}</compilecommandpicklistitem>
+        </compilecommandpicklist>
+        <compilecommand>${AUTO_COMPILE}</compilecommand>
+      </compile>
+      <dbx_gdbdebugger version="1">
+        <gdb_pathmaps>
+        </gdb_pathmaps>
+        <gdb_interceptlist>
+          <gdbinterceptoptions gdb_all="false" gdb_unhandled="true" gdb_unexpected="true"/>
+        </gdb_interceptlist>
+        <gdb_options>
+          <DebugOptions>
+          </DebugOptions>
+        </gdb_options>
+        <gdb_buildfirst gdb_buildfirst_overriden="false" gdb_buildfirst_old="false"/>
+      </dbx_gdbdebugger>
+      <nativedebugger version="1">
+        <engine>gdb</engine>
+      </nativedebugger>
+      <runprofile version="9">
+        <runcommandpicklist>
+          <runcommandpicklistitem>"${OUTPUT_PATH}"</runcommandpicklistitem>
+        </runcommandpicklist>
+        <runcommand>"${OUTPUT_PATH}"</runcommand>
+        <rundir>.</rundir>
+        <buildfirst>false</buildfirst>
+        <terminal-type>0</terminal-type>
+        <remove-instrumentation>0</remove-instrumentation>
+        <environment>
+        </environment>
+      </runprofile>
+    </conf>
+  </confs>
+</configurationDescriptor>
