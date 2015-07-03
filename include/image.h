@@ -128,6 +128,12 @@ extern bool img_common_magic;
 #define O_SHOW		(O_RDONLY | O_NOBUF)
 #define O_RSTR		(O_RDONLY)
 
+
+/* <underscore> 
+ * TODO - place prints on all these functions. I want to make sure that we can
+   intercept all calls at this level. I also want to understand the workflow 
+   of restore. */
+
 struct cr_img {
 	union {
 		struct bfd _x;

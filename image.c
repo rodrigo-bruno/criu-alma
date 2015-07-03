@@ -239,6 +239,7 @@ struct cr_img *open_image_at(int dfd, int type, unsigned long flags, ...)
 	oflags = flags | imgset_template[type].oflags;
 
 	va_start(args, flags);
+        // <underscore> path construction ($IMG_DIR/inventory.img).
 	vsnprintf(path, PATH_MAX, imgset_template[type].fmt, args);
 	va_end(args);
 
@@ -396,6 +397,7 @@ struct cr_img *img_from_fd(int fd)
 	return img;
 }
 
+/* <undersore> entry point from main to open image dir */
 int open_image_dir(char *dir)
 {
 	int fd, ret;

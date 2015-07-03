@@ -1777,6 +1777,7 @@ err:
 	return ret;
 }
 
+/* <underscore> Main entry point for a process dump (called from main). */
 int cr_dump_tasks(pid_t pid)
 {
 	struct pstree_item *item;
@@ -1892,6 +1893,7 @@ err:
 
 	close_cr_imgset(&glob_imgset);
 
+        // <underscore> check if every thing got flushed!
 	if (bfd_flush_images())
 		ret = -1;
 
