@@ -243,6 +243,9 @@ struct cr_img *open_image_at(int dfd, int type, unsigned long flags, ...)
 	vsnprintf(path, PATH_MAX, imgset_template[type].fmt, args);
 	va_end(args);
 
+        // <underscore>
+        printf("do_open_image_at (might be lazy) path=%s\n", path);
+        
 	if (lazy) {
 		img->fd = LAZY_IMG_FD;
 		img->type = type;
@@ -303,12 +306,33 @@ static int img_write_magic(struct cr_img *img, int oflags, int type)
 	return write_img(img, &imgset_template[type].magic);
 }
 
+// <underscore> this is where files are open!
 static int do_open_image(struct cr_img *img, int dfd, int type, unsigned long oflags, char *path)
 {
 	int ret, flags;
 
 	flags = oflags & ~(O_NOBUF | O_SERVICE);
 
+        /*
+         TODO 1 - add an option to do remote dump/restore
+         * Alg:
+         *  - <restore> starts and opens a server socket
+         *  - <restore> for each accept, save the fd into a hash table 
+         * <image-desc, fd>
+         *  - <restore> for each open file call, look for an already received 
+         * connection. If the connection isn't created already, wait until it
+         * succeeds.
+         *  - <restore> on successful restore, close all connections.
+         * 
+         * - <dump> (assume that the restore side is already created)
+         * - <dump> for every file open, create a new client socket connection
+         * - <dump> try to proceed as usual.
+         */
+        
+        
+        // <underscore>
+        printf("do_open_image path=%s\n", path);
+        
 	ret = openat(dfd, path, flags, CR_FD_PERM);
 	if (ret < 0) {
 		if (!(flags & O_CREAT) && (errno == ENOENT)) {

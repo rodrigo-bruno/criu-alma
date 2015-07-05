@@ -35,6 +35,8 @@ OBJCOPY		:= $(CROSS_COMPILE)objcopy
 
 CFLAGS		+= $(USERCFLAGS)
 
+#DEBUG := 1
+
 #
 # Fetch ARCH from the uname if not yet set
 #

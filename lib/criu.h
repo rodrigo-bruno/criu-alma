@@ -57,6 +57,7 @@ int criu_add_veth_pair(char *in, char *out);
 int criu_add_cg_root(char *ctrl, char *path);
 int criu_add_enable_fs(char *fs);
 int criu_add_skip_mnt(char *mnt);
+void criu_set_remote(bool remote); // <underscore>
 
 /*
  * The criu_notify_arg_t na argument is an opaque

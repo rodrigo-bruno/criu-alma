@@ -234,6 +234,7 @@ int main(int argc, char *argv[], char *envp[])
 		{ "enable-fs",			required_argument,	0, 1065 },
 		{ "enable-external-sharing", 	no_argument, 		0, 1066 },
 		{ "enable-external-masters", 	no_argument, 		0, 1067 },
+                { "remote",                     no_argument, 		0, 1068 },
 		{ },
 	};
 
@@ -462,6 +463,9 @@ int main(int argc, char *argv[], char *envp[])
 		case 1067:
 			opts.enable_external_masters = true;
 			break;
+                case 1068:
+                        opts.remote = true;
+                        break;
 		case 'M':
 			{
 				char *aux;

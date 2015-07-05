@@ -396,7 +396,12 @@ static int setup_opts_from_req(int sk, CriuOpts *req)
 
 	if (req->has_ext_masters)
 		opts.enable_external_masters = req->ext_masters;
-
+        
+        /* <underscore> */
+        if (req->remote)
+		opts.remote = req->remote;
+        /* </underscore> */
+        
 	return 0;
 
 err:

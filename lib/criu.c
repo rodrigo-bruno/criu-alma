@@ -390,6 +390,14 @@ err:
 	return -ENOMEM;
 }
 
+/* <underscore> */
+void criu_set_remote(bool remote)
+{
+	opts->has_remote = true;
+	opts->remote = remote;
+}
+/* </underscore> */
+
 static CriuResp *recv_resp(int socket_fd)
 {
 	unsigned char *buf;

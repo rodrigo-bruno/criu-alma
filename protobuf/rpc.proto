@@ -68,6 +68,7 @@ message criu_opts {
 
 	repeated string			skip_mnt	= 31;
 	repeated string			enable_fs	= 32;
+        optional bool			remote  	= 33; /* <underscore> */
 }
 
 message criu_dump_resp {

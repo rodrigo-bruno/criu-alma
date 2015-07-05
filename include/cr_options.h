@@ -78,6 +78,7 @@ struct cr_options {
 	bool			enable_external_sharing;
 	bool			enable_external_masters;
 	bool			aufs;		/* auto-deteced, not via cli */
+        bool                    remote;
 };
 
 extern struct cr_options opts;
