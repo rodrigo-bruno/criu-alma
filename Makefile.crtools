@@ -6,6 +6,7 @@ obj-y	+= crtools.o
 obj-y	+= security.o
 obj-y	+= image.o
 obj-y	+= image-desc.o
+obj-y	+= image-remote.o
 obj-y	+= net.o
 obj-y	+= tun.o
 obj-y	+= proc_parse.o

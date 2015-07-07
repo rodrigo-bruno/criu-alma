@@ -242,9 +242,6 @@ struct cr_img *open_image_at(int dfd, int type, unsigned long flags, ...)
         // <underscore> path construction ($IMG_DIR/inventory.img).
 	vsnprintf(path, PATH_MAX, imgset_template[type].fmt, args);
 	va_end(args);
-
-        // <underscore>
-        printf("do_open_image_at (might be lazy) path=%s\n", path);
         
 	if (lazy) {
 		img->fd = LAZY_IMG_FD;
@@ -314,11 +311,18 @@ static int do_open_image(struct cr_img *img, int dfd, int type, unsigned long of
 	flags = oflags & ~(O_NOBUF | O_SERVICE);
 
         /*
-         TODO 1 - add an option to do remote dump/restore
+         * TODO 1 - add an option to do remote dump/restore. By default the 
+         * restore socket is localhost:9997. They we can use an SSH tunnel to
+         * redirect it to other machine and provide confidentiality.
+         * TODO 2 - for each open, create a socket connection to a local dummy
+         * program that writes the info down to disk. Check if all data is OKAY
+         * and if I can restore from that data. 
+         * TODO X - This can be override restore socket with --address.
+         * NOTE: dump is WRONLY, restore is RDONLY
          * Alg:
          *  - <restore> starts and opens a server socket
          *  - <restore> for each accept, save the fd into a hash table 
-         * <image-desc, fd>
+         * <image-magic,path; fd>
          *  - <restore> for each open file call, look for an already received 
          * connection. If the connection isn't created already, wait until it
          * succeeds.
@@ -374,6 +378,59 @@ skip_magic:
 err:
 	return -1;
 }
+
+// <underscore>
+/*
+static int do_open_remote_image(struct cr_img *img, int type, unsigned long oflags, char *path)
+{
+	int ret, flags;
+
+	flags = oflags & ~(O_NOBUF | O_SERVICE);
+
+        
+        
+        // TODO
+        if (flags == O_RDONLY) {
+            printf("do_open_remote_image RDONLY path=%s\n", path);
+                // check hash-map
+        }
+        else {
+            printf("do_open_remote_image WDONLY path=%s\n", path);
+                // open client socket
+        }
+        
+
+	img->_x.fd = ret;
+	if (oflags & O_NOBUF)
+		bfd_setraw(&img->_x);
+	else {
+		if (flags == O_RDONLY)
+			ret = bfdopenr(&img->_x);
+		else
+			ret = bfdopenw(&img->_x);
+
+		if (ret)
+			goto err;
+	}
+
+	if (imgset_template[type].magic == RAW_IMAGE_MAGIC)
+		goto skip_magic;
+
+	if (flags == O_RDONLY)
+		ret = img_check_magic(img, oflags, type, path);
+	else
+		ret = img_write_magic(img, oflags, type);
+	if (ret)
+		goto err;
+
+skip_magic:
+	return 0;
+
+err:
+	return -1;
+}
+ * */
+// </underscore>
 
 int open_image_lazy(struct cr_img *img)
 {
