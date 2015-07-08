@@ -12,6 +12,7 @@
 #include "protobuf.h"
 #include "protobuf/inventory.pb-c.h"
 #include "protobuf/pagemap.pb-c.h"
+#include "image-remote.h"
 
 bool fdinfo_per_id = false;
 bool ns_per_id = false;
@@ -218,6 +219,9 @@ struct cr_imgset *cr_glob_imgset_open(int mode)
 }
 
 static int do_open_image(struct cr_img *img, int dfd, int type, unsigned long flags, char *path);
+// <underscore>
+static int do_open_remote_image(struct cr_img *img, int type, unsigned long flags, char *path);
+// </underscore>
 
 struct cr_img *open_image_at(int dfd, int type, unsigned long flags, ...)
 {
@@ -252,10 +256,18 @@ struct cr_img *open_image_at(int dfd, int type, unsigned long flags, ...)
 	} else
 		img->fd = EMPTY_IMG_FD;
 
-	if (do_open_image(img, dfd, type, oflags, path)) {
-		close_image(img);
-		return NULL;
-	}
+        if(opts.remote) {
+            if (do_open_remote_image(img, type, oflags, path)) {
+                    close_image(img);
+                    return NULL;
+            }
+        }
+        else {
+            if (do_open_image(img, dfd, type, oflags, path)) {
+                    close_image(img);
+                    return NULL;
+            }
+        }
 
 	return img;
 }
@@ -380,24 +392,31 @@ err:
 }
 
 // <underscore>
-/*
 static int do_open_remote_image(struct cr_img *img, int type, unsigned long oflags, char *path)
 {
 	int ret, flags;
 
 	flags = oflags & ~(O_NOBUF | O_SERVICE);
-
         
-        
-        // TODO
         if (flags == O_RDONLY) {
             printf("do_open_remote_image RDONLY path=%s\n", path);
-                // check hash-map
+            ret = get_remote_image_connection(path);
         }
         else {
             printf("do_open_remote_image WDONLY path=%s\n", path);
-                // open client socket
+            ret = open_remote_image_connection(path);
         }
+        
+        if (ret < 0) {
+		if (!(flags & O_CREAT) && (errno == ENOENT)) {
+			pr_info("No %s image\n", path);
+			img->_x.fd = EMPTY_IMG_FD;
+			goto skip_magic;
+		}
+
+		pr_perror("Unable to open %s", path);
+		goto err;
+	}
         
 
 	img->_x.fd = ret;
@@ -429,25 +448,31 @@ skip_magic:
 err:
 	return -1;
 }
- * */
-// </underscore>
+ // </underscore>
 
 int open_image_lazy(struct cr_img *img)
 {
-	int dfd;
+	int dfd, ret;
 	char *path = img->path;
 
 	img->path = NULL;
 
 	dfd = get_service_fd(IMG_FD_OFF);
-	if (do_open_image(img, dfd, img->type, img->oflags, path)) {
+        if(opts.remote) {
+            ret = do_open_remote_image(img, img->type, img->oflags, path);
+        } 
+        else {
+            ret = do_open_image(img, dfd, img->type, img->oflags, path);
+        }
+        
+        if(ret) {
 		xfree(path);
 		return -1;
 	}
-
 	xfree(path);
 	return 0;
 }
+ // </underscore>
 
 void close_image(struct cr_img *img)
 {

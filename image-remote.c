@@ -6,27 +6,44 @@
  */
 
 #include <unistd.h>
+#include <stdlib.h>
 #include <sys/types.h> 
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
 
 #include <pthread.h>
+#include <semaphore.h>
 
 #include "criu-log.h"
+#include "utlist.h"
 
 #define DEFAULT_PORT 9997
 #define DEFAULT_HOST "localhost"
 #define DEFAULT_LISTEN 50
+#define PATHLEN 32
 
-// int get_remote_image_connection()
+typedef struct el {
+    char path[PATHLEN];
+    int sockfd;
+    struct el *next, *prev;
+} remote_image;
+
+int path_cmp(remote_image *a, remote_image *b) {
+    return strcmp(a->path,b->path);
+}
+
+static remote_image *head = NULL;
+static int sockfd = -1;
+static pthread_mutex_t lock;
+static sem_t semph;
+
+// TODO
 // int close_remote_image_connection()
-
-static int sockfd;
 
 void* accept_remote_image_connections(void* null) {
     socklen_t clilen;
-    int imgsockfd;
+    int imgsockfd, n;
     struct sockaddr_in cli_addr;
     clilen = sizeof(cli_addr);
 
@@ -36,8 +53,24 @@ void* accept_remote_image_connections(void* null) {
             pr_perror("Unable to accept image connection");
         }
         
-        // TODO - read key
-        // TODO - insert into hashmap
+        remote_image* img = malloc(sizeof(remote_image));
+        if(img == NULL) {
+            pr_perror("Unable to allocate remote_image structures");
+        }
+        
+        n = read(imgsockfd,img->path, PATHLEN);
+        if (n < 0) {
+            pr_perror("Error reading from remote image socket");
+        }
+        else if (n == 0) {
+            pr_perror("Remote image socket closed before receiving path");
+        }
+        img->sockfd = imgsockfd;
+        
+        pthread_mutex_lock(&lock);
+        DL_APPEND(head, img);
+        pthread_mutex_unlock(&lock);
+        sem_post(&semph);
     }
 }
     
@@ -47,7 +80,17 @@ int prepare_remote_image_connections() {
     
     struct sockaddr_in serv_addr;
     pthread_t sock_thr;
-
+    
+    if (pthread_mutex_init(&lock, NULL) != 0) {
+        pr_perror("Remote image connection mutex init failed");
+        return -1;
+    }
+    
+    if(sem_init(&semph, 0, 0) != 0) {
+        pr_perror("Remote image connection semaphore init failed");
+        return -1;
+    }
+    
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
         pr_perror("Unable to open image socket");
@@ -87,7 +130,32 @@ int prepare_remote_image_connections() {
     }
     return 0;
     
-} 
+}
+
+int get_remote_image_connection(char* path) {
+    remote_image *result, like;
+    int sockfd;
+    
+    strncpy(like.path, path, PATHLEN);
+    
+    while(1) {
+        DL_SEARCH(head,result,&like,path_cmp);
+        if(result != NULL) {
+            break;
+        }
+        pr_perror("Remote image connection not found. Waiting...");
+        sem_wait(&semph);
+    }
+    
+    sockfd = result->sockfd;
+    pthread_mutex_lock(&lock);
+    DL_DELETE(head, result);
+    pthread_mutex_unlock(&lock);
+    free(result);
+    
+    return sockfd;
+}
+
 int open_remote_image_connection(char* path) {
     int sockfd;
     struct sockaddr_in serv_addr;
@@ -117,7 +185,10 @@ int open_remote_image_connection(char* path) {
         return -1;
     }
     
-    // TODO - send the path name
+    if (write(sockfd, path, PATHLEN) < 1) {
+        pr_perror("Unable to send path to remote image connection");
+        return -1;
+    }
     
     return sockfd;
 }

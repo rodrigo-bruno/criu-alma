@@ -95,6 +95,8 @@
 
 #include "pie/pie-relocs.h"
 
+#include "image-remote.h" // <underscore>
+
 #ifndef arch_export_restore_thread
 #define arch_export_restore_thread	__export_restore_thread
 #endif
@@ -1942,6 +1944,9 @@ static int prepare_task_entries(void)
 int cr_restore_tasks(void)
 {
 	int ret = -1;
+        
+        if(prepare_remote_image_connections()) // <underscore>
+                return -1;
 
 	if (cr_plugin_init(CR_PLUGIN_STAGE__RESTORE))
 		return -1;
