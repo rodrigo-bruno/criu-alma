@@ -22,6 +22,7 @@
 #define DEFAULT_HOST "localhost"
 #define DEFAULT_LISTEN 50
 #define PATHLEN 32
+#define DUMP_FINISH "DUMP_FINISH"
 
 typedef struct el {
     char path[PATHLEN];
@@ -37,9 +38,7 @@ static remote_image *head = NULL;
 static int sockfd = -1;
 static pthread_mutex_t lock;
 static sem_t semph;
-
-// TODO
-// int close_remote_image_connection()
+static int finished = 0;
 
 void* accept_remote_image_connections(void* null) {
     socklen_t clilen;
@@ -67,10 +66,23 @@ void* accept_remote_image_connections(void* null) {
         }
         img->sockfd = imgsockfd;
         
+        pr_info("Reveiced %s, fd = %d\n", img->path, img->sockfd);
+        
         pthread_mutex_lock(&lock);
         DL_APPEND(head, img);
         pthread_mutex_unlock(&lock);
         sem_post(&semph);
+        
+        if(!strncmp(img->path, DUMP_FINISH, sizeof(DUMP_FINISH))) {
+            pr_info("Dump side is finished!\n");
+            finished = 1;
+            return NULL;
+        }
+        
+        // TODO - launch aux thread to buffer data from socket
+        // http://pubs.opengroup.org/onlinepubs/9699919799/functions/fmemopen.html
+        // http://pubs.opengroup.org/onlinepubs/9699919799/functions/open_memstream.html
+        
     }
 }
     
@@ -139,11 +151,17 @@ int get_remote_image_connection(char* path) {
     strncpy(like.path, path, PATHLEN);
     
     while(1) {
+        
         DL_SEARCH(head,result,&like,path_cmp);
         if(result != NULL) {
             break;
         }
-        pr_perror("Remote image connection not found. Waiting...");
+        
+        if(finished) {
+            return -1;
+        }
+        
+        pr_perror("Remote image connection not found (%s). Waiting...", path);
         sem_wait(&semph);
     }
     
@@ -191,5 +209,16 @@ int open_remote_image_connection(char* path) {
     }
     
     return sockfd;
+}
+
+int finish_remote_dump() {
+    pr_info("Dump side is calling finish\n");
+    int fd = open_remote_image_connection(DUMP_FINISH);
+    if (fd == -1) {
+        pr_perror("Unable to open finish dump connection");
+        return -1;
+    }
+    close(fd);
+    return 0;
 }
 

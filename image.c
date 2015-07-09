@@ -330,6 +330,7 @@ static int do_open_image(struct cr_img *img, int dfd, int type, unsigned long of
          * program that writes the info down to disk. Check if all data is OKAY
          * and if I can restore from that data. 
          * TODO X - This can be override restore socket with --address.
+         * TODO ! - There is one file missing! path=inetsk.img
          * NOTE: dump is WRONLY, restore is RDONLY
          * Alg:
          *  - <restore> starts and opens a server socket
@@ -345,10 +346,8 @@ static int do_open_image(struct cr_img *img, int dfd, int type, unsigned long of
          * - <dump> try to proceed as usual.
          */
         
-        
-        // <underscore>
-        printf("do_open_image path=%s\n", path);
-        
+        printf("do_open_image path =%s\n", path); // <underscore>
+               
 	ret = openat(dfd, path, flags, CR_FD_PERM);
 	if (ret < 0) {
 		if (!(flags & O_CREAT) && (errno == ENOENT)) {
@@ -377,10 +376,14 @@ static int do_open_image(struct cr_img *img, int dfd, int type, unsigned long of
 	if (imgset_template[type].magic == RAW_IMAGE_MAGIC)
 		goto skip_magic;
 
-	if (flags == O_RDONLY)
+	if (flags == O_RDONLY) {
 		ret = img_check_magic(img, oflags, type, path);
-	else
+                printf("do_open_image path (RDONLY) =%s\n", path); // <underscore>
+        }
+	else {
 		ret = img_write_magic(img, oflags, type);
+                printf("do_open_image path (WRONLY) =%s\n", path); // <underscore>
+        }
 	if (ret)
 		goto err;
 
@@ -392,11 +395,22 @@ err:
 }
 
 // <underscore>
+int do_finish_remote_dump() {
+    return finish_remote_dump();
+}
+
 static int do_open_remote_image(struct cr_img *img, int type, unsigned long oflags, char *path)
 {
 	int ret, flags;
 
 	flags = oflags & ~(O_NOBUF | O_SERVICE);
+        
+        // TODO - fix this. Find out what is the purpose of this file.
+        if(!strcmp("irmap-cache", path)) {
+                pr_info("No %s image\n", path);
+		img->_x.fd = EMPTY_IMG_FD;
+		goto skip_magic;
+        }
         
         if (flags == O_RDONLY) {
             printf("do_open_remote_image RDONLY path=%s\n", path);
@@ -618,7 +632,7 @@ int read_img_buf_eof(struct cr_img *img, void *ptr, int size)
 		return 0;
 
 	if (ret < 0)
-		pr_perror("Can't read img file");
+		pr_perror("Can't read img file %s", img->path);
 	else
 		pr_err("Img trimmed %d/%d\n", ret, size);
 	return -1;

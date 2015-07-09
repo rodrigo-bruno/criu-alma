@@ -20,5 +20,10 @@ extern int get_remote_image_connection(char* path);
    fd is returned for further writing operations. */
 extern int open_remote_image_connection(char* path);
 
+/* Called by dump when everything is dumped. This function creates a new 
+ * connection with a special control name. The recover side uses it to ack that
+ *  no more files are comming. */
+extern int finish_remote_dump();
+
 #endif	/* IMAGE_REMOTE_H */
 

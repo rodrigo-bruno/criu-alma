@@ -146,7 +146,7 @@ static int brefill(struct bfd *f)
 
 	ret = read(f->fd, b->mem + b->sz, BUFSIZE - b->sz);
 	if (ret < 0) {
-		pr_perror("Error reading file");
+		pr_perror("Error reading file (fd = %d)", f->fd);
 		return -1;
 	}
 

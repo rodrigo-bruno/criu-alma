@@ -1917,8 +1917,22 @@ err:
 	if (disconnect_from_page_server())
 		ret = -1;
 
-	close_cr_imgset(&glob_imgset);
+        // <underscore>
+        if (opts.remote) {
+            printf("Finishing remote dump\n");
+            do_finish_remote_dump();
+        }
+        // </underscore>
 
+        // <undescore> TODO - we have to wait for the restore to close their side.
+
+        if (opts.remote) {
+            printf("DEBUG SLEEP (1 min)\n");
+            sleep(60);
+        }
+	close_cr_imgset(&glob_imgset);
+        // </undescore>
+        
         // <underscore> check if every thing got flushed!
 	if (bfd_flush_images())
 		ret = -1;
