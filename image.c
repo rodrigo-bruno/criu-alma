@@ -399,6 +399,14 @@ int do_finish_remote_dump() {
     return finish_remote_dump();
 }
 
+void do_check_remote_images() {
+    check_remote_connections();
+}
+
+int do_is_remote_image(int fd) {
+    return is_remote_image(fd);
+}
+
 static int do_open_remote_image(struct cr_img *img, int type, unsigned long oflags, char *path)
 {
 	int ret, flags;
@@ -413,11 +421,11 @@ static int do_open_remote_image(struct cr_img *img, int type, unsigned long ofla
         }
         
         if (flags == O_RDONLY) {
-            printf("do_open_remote_image RDONLY path=%s\n", path);
+            pr_info("do_open_remote_image RDONLY path=%s\n", path);
             ret = get_remote_image_connection(path);
         }
         else {
-            printf("do_open_remote_image WDONLY path=%s\n", path);
+            pr_info("do_open_remote_image WDONLY path=%s\n", path);
             ret = open_remote_image_connection(path);
         }
         

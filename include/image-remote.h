@@ -9,21 +9,29 @@
 #define	IMAGE_REMOTE_H
 
 /* Called by restore function. Launches a threads that accepts connections for
-   remote images. */
+ * remote images. */
 extern int prepare_remote_image_connections();
 
 /* Called by restore to get the fd correspondent to a particular path. This call
-   will block until the connection is received. */
+ * will block until the connection is received. */
 extern int get_remote_image_connection(char* path);
 
 /* Called by dump to create a socket connection to the restore side. The socket
-   fd is returned for further writing operations. */
+ * fd is returned for further writing operations. */
 extern int open_remote_image_connection(char* path);
 
 /* Called by dump when everything is dumped. This function creates a new 
  * connection with a special control name. The recover side uses it to ack that
- *  no more files are comming. */
+ * no more files are comming. */
 extern int finish_remote_dump();
+
+/* Dumps to pr_pinfo the state of all remote image connections. Useful for 
+ * debug. */
+extern void check_remote_connections();
+
+/* Checks if the given fd is registered as a remove image connection fd. */
+extern int is_remote_image(int fd);
+
 
 #endif	/* IMAGE_REMOTE_H */
 

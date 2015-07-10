@@ -193,5 +193,7 @@ extern int read_img_str(struct cr_img *, char **pstr, int size);
 extern void close_image(struct cr_img *);
 
 extern int do_finish_remote_dump(); // <underscore>
+extern void do_check_remote_images(); // <underscore>
+extern int do_is_remote_image(int fd); // <underscore>
 
 #endif /* __CR_IMAGE_H__ */

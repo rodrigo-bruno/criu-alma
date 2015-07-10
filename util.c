@@ -422,6 +422,13 @@ int clone_service_fd(int id)
 
 bool is_any_service_fd(int fd)
 {
+    
+        /* <underscore> */
+        if (opts.remote && do_is_remote_image(fd)) {
+            return 1;
+        }
+        /* </underscore> */
+        
 	return fd > __get_service_fd(SERVICE_FD_MAX, service_fd_id) &&
 		fd < __get_service_fd(SERVICE_FD_MIN, service_fd_id);
 }
