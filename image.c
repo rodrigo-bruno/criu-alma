@@ -323,19 +323,23 @@ static int do_open_image(struct cr_img *img, int dfd, int type, unsigned long of
 	flags = oflags & ~(O_NOBUF | O_SERVICE);
 
         /*
-         * TODO 1 - add an option to do remote dump/restore. By default the 
-         * restore socket is localhost:9997. They we can use an SSH tunnel to
-         * redirect it to other machine and provide confidentiality.
-         * TODO 2 - for each open, create a socket connection to a local dummy
-         * program that writes the info down to disk. Check if all data is OKAY
-         * and if I can restore from that data. 
-         * TODO X - This can be override restore socket with --address.
-         * TODO ! - There is one file missing! path=inetsk.img
+         * TODO - option to change the default local port.
          * NOTE: dump is WRONLY, restore is RDONLY
+         * NOTE: /usr/lib/locale/locale-archive had to be copied from poligrid...
+         * Path to success:
+         * PC 1:
+         * sudo criu restore -d -vvv -o restore.log  --remote && echo OK
+         * 
+         * PC 2:
+         * ssh -f rbruno@poligrid -L 9997:poligrid:9997 -N
+         * setsid ./test.sh  < /dev/null &> /tmp/test.log &
+         * ps -C test.sh
+         * sudo criu dump -t <pid> -vvv -o dump.log --remote && echo OK
+         * scp /tmp/test.log rbruno@polidrig:/tmp
+         * 
          * Alg:
          *  - <restore> starts and opens a server socket
-         *  - <restore> for each accept, save the fd into a hash table 
-         * <image-magic,path; fd>
+         *  - <restore> for each accept, save the fd into a hash table <path; fd>
          *  - <restore> for each open file call, look for an already received 
          * connection. If the connection isn't created already, wait until it
          * succeeds.

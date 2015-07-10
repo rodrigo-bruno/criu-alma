@@ -117,7 +117,7 @@ void* accept_remote_image_connections(void* null) {
             return NULL;
         }
 
-        // TODO - launch aux thread to buffer data from socket
+        // TODO - launch aux thread to buffer data from socket?
         // http://pubs.opengroup.org/onlinepubs/9699919799/functions/fmemopen.html
         // http://pubs.opengroup.org/onlinepubs/9699919799/functions/open_memstream.html
 
@@ -211,8 +211,6 @@ int get_remote_image_connection(char* path) {
     pthread_mutex_unlock(&lock);
     free(result);
 
-    // TODO - check all socks. I suspect that they are all doomed!
-    // TODO - duplicate dump-side sockfds to avoid socket teminations?
     if (getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &error, &len)) {
         pr_perror("Returning invalid socket (fd = %d), error = %d", sockfd, error);
     }
