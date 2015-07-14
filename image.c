@@ -446,6 +446,8 @@ static int do_open_remote_image(struct cr_img *img, int type, unsigned long ofla
         
 
 	img->_x.fd = ret;
+        // TODO - remote images should not use buffers, they will use my buffers
+        // anyway
 	if (oflags & O_NOBUF)
 		bfd_setraw(&img->_x);
 	else {
