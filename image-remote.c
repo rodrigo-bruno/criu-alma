@@ -205,6 +205,9 @@ int get_remote_image_connection(char* path) {
         sem_wait(&semph);
     }
 
+    // TODO - read socket until the end and put it into a memory buffer. Return
+    // the file descriptor of the buffer
+    
     sockfd = result->sockfd;
     pthread_mutex_lock(&lock);
     DL_DELETE(head, result);

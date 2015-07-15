@@ -1053,7 +1053,8 @@ int open_path(struct file_desc *d,
 			pr_err("File %s has bad size %"PRIu64" (expect %"PRIu64")\n",
 					rfi->path, st.st_size,
 					rfi->rfe->size);
-			return -1;
+                        /* <underscore> Commented next line just to see what happens... */
+			//return -1;
 		}
 
 		/*
