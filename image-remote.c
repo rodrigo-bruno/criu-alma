@@ -113,6 +113,7 @@ void* accept_remote_image_connections(void* null) {
 
         if (!strncmp(img->path, DUMP_FINISH, sizeof (DUMP_FINISH))) {
             pr_info("Dump side is finished!\n");
+            close(sockfd);
             finished = 1;
             return NULL;
         }
