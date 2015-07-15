@@ -40,14 +40,14 @@
 typedef struct rbuf {
     char buffer[BUF_SIZE];
     int nbytes; // How many bytes are in the buffer.
-    struct el *next, *prev;
+    struct rbuf *next, *prev;
 } remote_buffer;
 
 typedef struct rimg {
     char path[PATHLEN];
     int sockfd;
     int pipe[2]; // pipe[0] is RDONLY, pipe[1] is WRONLY
-    struct el *next, *prev;
+    struct rimg *next, *prev;
     pthread_t worker;
     remote_buffer* buf_head;
     
@@ -58,7 +58,9 @@ int path_cmp(remote_image *a, remote_image *b) {
 }
 
 int fd_cmp(remote_image *a, remote_image *b) {
-    return a->sockfd == b->sockfd;
+    return  a->sockfd == b->sockfd || 
+            a->pipe[PIPE_READ] == b->pipe[PIPE_READ] || 
+            a->pipe[PIPE_WRITE] == b->pipe[PIPE_WRITE];
 }
 
 static remote_image *head = NULL;
@@ -82,11 +84,12 @@ void check_remote_connections() {
     pthread_mutex_unlock(&lock);
 }
 
-// TODO - need to check for pipe and socket
 int is_remote_image(int fd) {
     remote_image *result, like;
 
     like.sockfd = fd;
+    like.pipe[PIPE_READ] = fd;
+    like.pipe[PIPE_WRITE] = fd;
 
     pthread_mutex_lock(&lock);
     DL_SEARCH(head, result, &like, fd_cmp);
@@ -99,22 +102,17 @@ int is_remote_image(int fd) {
     return 0;
 }
 
-/* Dump side:
- *  read pipe, write to buffer
- *  when pipe is closed, send buffer to socket
- */
-void* buffer_to_remote_image(void* ptr) {
-    remote_image* rimg = (remote_image*) ptr;
+void* buffer_remote_image(remote_image* rimg, int src_fd, int dst_fd) {
     int n;
     remote_buffer* curr_buf = rimg->buf_head;
     int curr_offset = 0;
     
     while(1) {
-        n = read(   rimg->pipe[PIPE_READ], 
+        n = read(   src_fd, 
                     curr_buf->buffer + curr_offset, 
                     BUF_SIZE - curr_offset);
         if (n == 0) {
-            // TODO - close socket
+            close(src_fd);
             break;
         }
         else if (n > 0) {
@@ -134,7 +132,7 @@ void* buffer_to_remote_image(void* ptr) {
             
         }
         else {
-            pr_perror("Read on %s socket failed", img->path);
+            pr_perror("Read on %s socket failed", rimg->path);
             return NULL;
         }
     }
@@ -144,12 +142,13 @@ void* buffer_to_remote_image(void* ptr) {
     while(1) {
         if(!curr_buf) {
             break;
+            close(dst_fd);
         }
         n = write(
-                    rimg->sockfd, 
+                    dst_fd, 
                     curr_buf->buffer + curr_offset, 
                     MIN(BUF_SIZE, curr_buf->nbytes) - curr_offset);
-        if(n > 0) {
+        if(n > -1) {
             curr_offset += n;
             if(curr_offset == BUF_SIZE) {
                 curr_buf = curr_buf->next;
@@ -157,17 +156,29 @@ void* buffer_to_remote_image(void* ptr) {
             }
         }
         else {
-             pr_perror("Write on %s socket failed (n=%d)", img->path, n);
+             pr_perror("Write on %s socket failed (n=%d)", rimg->path, n);
         }
     }
     return NULL;
 }
 
-/* Restore side */
+/* Dump side:
+ *  read pipe, write to buffer
+ *  when pipe is closed, send buffer to socket
+ */
+void* buffer_to_remote_image(void* ptr) {
+    remote_image* rimg = (remote_image*) ptr;
+    return buffer_remote_image(rimg, rimg->pipe[PIPE_READ], rimg->sockfd);;
+    
+}
+
+/* Restore side 
+ *  read socket, write to buffer
+ *  when socket is closed, write to pipe
+ */
 void* buffer_from_remote_image(void* ptr){
     remote_image* rimg = (remote_image*) ptr;
-    // TODO - read socket, write to buffer
-    // TODO - when socket is closed, write buffer to pipe.
+    return buffer_remote_image(rimg, rimg->sockfd, rimg->pipe[PIPE_WRITE]);
 }
 
 void* accept_remote_image_connections(void* null) {
@@ -223,7 +234,7 @@ void* accept_remote_image_connections(void* null) {
                             buffer_from_remote_image, 
                             (void*) img)) {
                 pr_perror("Unable to create socket thread");
-                return -1;
+                return NULL;
         } 
         
         pr_info("Reveiced %s, fd = %d\n", img->path, img->sockfd);
@@ -371,7 +382,7 @@ int open_remote_image_connection(char* path) {
     img->sockfd = sockfd;
     img->buf_head = NULL;
     buf->nbytes = 0;
-    DL_APPEND(img->buf_head, remote_buffer);
+    DL_APPEND(img->buf_head, buf);
 
     if (pthread_create( &img->worker, 
                         NULL, 
