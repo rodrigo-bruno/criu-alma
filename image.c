@@ -350,9 +350,9 @@ static int do_open_image(struct cr_img *img, int dfd, int type, unsigned long of
          * - <dump> try to proceed as usual.
          */
         
-        printf("do_open_image path =%s\n", path); // <underscore>
                
 	ret = openat(dfd, path, flags, CR_FD_PERM);
+        
 	if (ret < 0) {
 		if (!(flags & O_CREAT) && (errno == ENOENT)) {
 			pr_info("No %s image\n", path);
@@ -363,6 +363,8 @@ static int do_open_image(struct cr_img *img, int dfd, int type, unsigned long of
 		pr_perror("Unable to open %s", path);
 		goto err;
 	}
+        
+        pr_info("do_open_image path =%s (fd = %d)\n", path, ret); // <underscore>
 
 	img->_x.fd = ret;
 	if (oflags & O_NOBUF)
@@ -382,11 +384,9 @@ static int do_open_image(struct cr_img *img, int dfd, int type, unsigned long of
 
 	if (flags == O_RDONLY) {
 		ret = img_check_magic(img, oflags, type, path);
-                printf("do_open_image path (RDONLY) =%s\n", path); // <underscore>
         }
 	else {
 		ret = img_write_magic(img, oflags, type);
-                printf("do_open_image path (WRONLY) =%s\n", path); // <underscore>
         }
 	if (ret)
 		goto err;
