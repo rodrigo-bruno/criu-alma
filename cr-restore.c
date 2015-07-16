@@ -184,7 +184,7 @@ static int root_prepare_shared(void)
 
 	if (prepare_shared_tty())
 		return -1;
-
+        
 	if (prepare_shared_reg_files())
 		return -1;
 
@@ -1045,7 +1045,7 @@ static inline int fork_with_pid(struct pstree_item *item)
 	struct cr_clone_arg ca;
 	int ret = -1;
 	pid_t pid = item->pid.virt;
-
+        
 	if (item->state != TASK_HELPER) {
 		struct cr_img *img;
 
@@ -1141,7 +1141,7 @@ static inline int fork_with_pid(struct pstree_item *item)
 		pr_perror("Can't fork for %d", pid);
 		goto err_unlock;
 	}
-
+        
 
 	if (item == root_item) {
 		item->pid.real = ret;
@@ -1463,7 +1463,8 @@ static int restore_task_with_children(void *_arg)
 	pid = getpid();
 	if (current->pid.virt != pid) {
 		pr_err("Pid %d do not match expected %d\n", pid, current->pid.virt);
-		set_task_cr_err(EEXIST);
+                 // <underscore> TODO - this can be a trouble maker.
+                set_task_cr_err(EEXIST);
 		goto err;
 	}
 
@@ -1494,7 +1495,9 @@ static int restore_task_with_children(void *_arg)
 		 */
 		if (mount_proc())
 			goto err_fini_mnt;
-
+                
+                // <underscore> - they are closing old fd. Changed to support 
+                // image connections remote.
 		if (close_old_fds(current))
 			goto err_fini_mnt;
 
@@ -1827,7 +1830,7 @@ static int restore_root_task(struct pstree_item *init)
 	ret = restore_switch_stage(CR_STATE_RESTORE);
 	if (ret < 0)
 		goto out_kill;
-
+        
 	ret = restore_switch_stage(CR_STATE_RESTORE_SIGCHLD);
 	if (ret < 0)
 		goto out_kill;
@@ -1852,7 +1855,7 @@ static int restore_root_task(struct pstree_item *init)
 		write_stats(RESTORE_STATS);
 		goto out_kill;
 	}
-
+        
 	/* Unlock network before disabling repair mode on sockets */
 	network_unlock();
 
@@ -1944,9 +1947,6 @@ static int prepare_task_entries(void)
 int cr_restore_tasks(void)
 {
 	int ret = -1;
-        
-        if(prepare_remote_image_connections()) // <underscore>
-                return -1;
 
 	if (cr_plugin_init(CR_PLUGIN_STAGE__RESTORE))
 		return -1;
@@ -2289,6 +2289,7 @@ static int prepare_creds(int pid, struct task_restore_args *args, char **lsm_pro
 		return -1;
 
 	ret = pb_read_one(img, &ce, PB_CREDS);
+        // <underscore> TODO - check if this is closing the socket!!!
 	close_image(img);
 
 	if (ret < 0)
