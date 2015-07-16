@@ -256,7 +256,8 @@ struct cr_img *open_image_at(int dfd, int type, unsigned long flags, ...)
 	} else
 		img->fd = EMPTY_IMG_FD;
 
-        if(opts.remote) {
+        if(opts.remote && 
+                !strcmp(path, "stats-dump") && !strcmp(path, "stats-restore")) {
             if (do_open_remote_image(img, type, oflags, path)) {
                     close_image(img);
                     return NULL;
