@@ -434,14 +434,10 @@ static int do_open_remote_image(struct cr_img *img, int type, unsigned long ofla
         }
         
         if (ret < 0) {
-		if (!(flags & O_CREAT) && (errno == ENOENT)) {
-			pr_info("No %s image\n", path);
-			img->_x.fd = EMPTY_IMG_FD;
-			goto skip_magic;
-		}
-
-		pr_perror("Unable to open %s", path);
-		goto err;
+            // TODO - check if there is any better solution for this.
+            pr_info("No %s image\n", path);
+            img->_x.fd = EMPTY_IMG_FD;
+            goto skip_magic;
 	}
         
 
