@@ -1924,14 +1924,7 @@ err:
         }
         // </underscore>
 
-        // <undescore> TODO - we have to wait for the restore to close their side.
-
-        if (opts.remote) {
-            printf("DEBUG SLEEP (1 min)\n");
-            sleep(60);
-        }
 	close_cr_imgset(&glob_imgset);
-        // </undescore>
         
         // <underscore> check if every thing got flushed!
 	if (bfd_flush_images())

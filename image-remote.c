@@ -122,7 +122,7 @@ int get_remote_image_connection(char* path) {
         return -1;
     }
     
-    if(strncmp(buf, path, PATHLEN)) {
+    if(!strncmp(buf, path, PATHLEN)) {
         pr_info("Image cache does have %s\n", path);
                
         remote_image* img = malloc(sizeof (remote_image));
@@ -135,7 +135,7 @@ int get_remote_image_connection(char* path) {
         DL_APPEND(head, img);
         return sockfd;
     }
-    else if(strncmp(buf, DUMP_FINISH, PATHLEN)) {
+    else if(!strncmp(buf, DUMP_FINISH, PATHLEN)) {
         pr_info("Image cache does not have %s\n", path);
         close(sockfd);
         return -1;
