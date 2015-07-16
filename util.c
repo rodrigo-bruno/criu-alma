@@ -424,9 +424,9 @@ bool is_any_service_fd(int fd)
 {
     
         /* <underscore> */
-        if (opts.remote && do_is_remote_image(fd)) {
-            return 1;
-        }
+        //if (opts.remote && do_is_remote_image(fd)) {
+        //    return 1;
+        //}
         /* </underscore> */
         
 	return fd > __get_service_fd(SERVICE_FD_MAX, service_fd_id) &&
