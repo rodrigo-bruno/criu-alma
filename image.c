@@ -481,7 +481,8 @@ int open_image_lazy(struct cr_img *img)
 	img->path = NULL;
 
 	dfd = get_service_fd(IMG_FD_OFF);
-        if(opts.remote) {
+        if(opts.remote && 
+                !strcmp(path, "stats-dump") && !strcmp(path, "stats-restore")) {
             ret = do_open_remote_image(img, img->type, img->oflags, path);
         } 
         else {
