@@ -256,6 +256,7 @@ struct cr_img *open_image_at(int dfd, int type, unsigned long flags, ...)
 	} else
 		img->fd = EMPTY_IMG_FD;
 
+        pr_info("REMOTE = %d, stats-dump = %d, stats-restore = %d\n",opts.remote, strcmp(path, "stats-dump"), !strcmp(path, "stats-restore"));
         if(opts.remote && 
                 !strcmp(path, "stats-dump") && !strcmp(path, "stats-restore")) {
             if (do_open_remote_image(img, type, oflags, path)) {
@@ -481,6 +482,7 @@ int open_image_lazy(struct cr_img *img)
 	img->path = NULL;
 
 	dfd = get_service_fd(IMG_FD_OFF);
+        pr_info("REMOTE = %d, stats-dump = %d, stats-restore = %d\n",opts.remote, strcmp(path, "stats-dump"), !strcmp(path, "stats-restore"));
         if(opts.remote && 
                 !strcmp(path, "stats-dump") && !strcmp(path, "stats-restore")) {
             ret = do_open_remote_image(img, img->type, img->oflags, path);
