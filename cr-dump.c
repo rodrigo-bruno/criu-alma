@@ -1865,6 +1865,12 @@ int cr_dump_tasks(pid_t pid)
 	if (collect_namespaces(true) < 0)
 		goto err;
 
+        // <underscore> down time start
+        time_t t;
+        time(&t);
+        pr_info("start down time %s\n", ctime(&t));
+        // </underscore> down time start
+        
         // <underscore> opens a set of images, from _CR_FD_GLOB_FROM to 
         // _CR_FD_GLOB_TO
 	glob_imgset = cr_glob_imgset_open(O_DUMP);

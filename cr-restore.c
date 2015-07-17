@@ -96,6 +96,7 @@
 #include "pie/pie-relocs.h"
 
 #include "image-remote.h" // <underscore>
+#include <time.h> // <underscore>
 
 #ifndef arch_export_restore_thread
 #define arch_export_restore_thread	__export_restore_thread
@@ -1463,7 +1464,6 @@ static int restore_task_with_children(void *_arg)
 	pid = getpid();
 	if (current->pid.virt != pid) {
 		pr_err("Pid %d do not match expected %d\n", pid, current->pid.virt);
-                 // <underscore> TODO - this can be a trouble maker.
                 set_task_cr_err(EEXIST);
 		goto err;
 	}
@@ -1496,8 +1496,6 @@ static int restore_task_with_children(void *_arg)
 		if (mount_proc())
 			goto err_fini_mnt;
                 
-                // <underscore> - they are closing old fd. Changed to support 
-                // image connections remote.
 		if (close_old_fds(current))
 			goto err_fini_mnt;
 
@@ -1892,6 +1890,12 @@ static int restore_root_task(struct pstree_item *init)
 	 * they continue run through sigreturn.
 	 */
 	finalize_restore(ret);
+        
+        // <underscore> end down time
+        time_t t;
+        time(&t);
+        pr_info("end down time %s\n", ctime(&t));
+        // </underscore> end down time
 
 	write_stats(RESTORE_STATS);
 
@@ -2289,7 +2293,6 @@ static int prepare_creds(int pid, struct task_restore_args *args, char **lsm_pro
 		return -1;
 
 	ret = pb_read_one(img, &ce, PB_CREDS);
-        // <underscore> TODO - check if this is closing the socket!!!
 	close_image(img);
 
 	if (ret < 0)
