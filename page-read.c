@@ -55,6 +55,8 @@ void iovec2pagemap(struct iovec *iov, PagemapEntry *pe)
 	pe->nr_pages = iov->iov_len / PAGE_SIZE;
 }
 
+// <underscore> This is how they are reading pagemap images. Now I need to 
+// understand how they correlate one pmi to a pi.
 static int get_pagemap(struct page_read *pr, struct iovec *iov)
 {
 	int ret;
@@ -255,6 +257,7 @@ int open_page_read_at(int dfd, int pid, struct page_read *pr, int pr_flags)
 	pr->bunch.iov_len = 0;
 	pr->bunch.iov_base = NULL;
 
+        // <underscore> open pagemap.
 	pr->pmi = open_image_at(dfd, i_typ, O_RSTR, (long)pid);
 	if (!pr->pmi)
 		return -1;
@@ -269,6 +272,7 @@ int open_page_read_at(int dfd, int pid, struct page_read *pr, int pr_flags)
 		return -1;
 	}
 
+        // <underscore> open corresponding pages-<#>
 	pr->pi = open_pages_image_at(dfd, flags, pr->pmi);
 	if (!pr->pi) {
 		close_page_read(pr);

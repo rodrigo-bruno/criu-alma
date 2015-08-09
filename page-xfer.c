@@ -648,6 +648,7 @@ static void close_page_xfer(struct page_xfer *xfer)
 	close_image(xfer->pmi);
 }
 
+// <underscore> TODO - can I use a hole to hide garbage?
 int page_xfer_dump_pages(struct page_xfer *xfer, struct page_pipe *pp,
 		unsigned long off)
 {
@@ -683,6 +684,8 @@ int page_xfer_dump_pages(struct page_xfer *xfer, struct page_pipe *pp,
 			pr_debug("\tp %p [%u]\n", iov->iov_base,
 					(unsigned int)(iov->iov_len / PAGE_SIZE));
 
+                        // <underscore> they write at the same time for the
+                        // pagemap.img and the page-<#>.img
 			if (xfer->write_pagemap(xfer, iov))
 				return -1;
 			if (xfer->write_pages(xfer, ppb->p[0], iov->iov_len))

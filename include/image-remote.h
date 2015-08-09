@@ -8,6 +8,13 @@
 #ifndef IMAGE_REMOTE_H
 #define	IMAGE_REMOTE_H
 
+/* Port number to be used for: i) receiving image files connections to be 
+ * proxied; ii) storing image files in cache. */
+#define DEFAULT_PUT_PORT 9995
+/* Port number to be used for retrieving image files from cache. */
+#define DEFAULT_GET_PORT 9997
+
+
 /* Called by restore function. Launches a threads that accepts connections for
  * remote images. */
 extern int prepare_remote_image_connections();
@@ -31,6 +38,15 @@ extern void check_remote_connections();
 
 /* Checks if the given fd is registered as a remove image connection fd. */
 extern int is_remote_image(int fd);
+
+/* Starts an image proxy daemon (dump side). It receives image files through 
+ * socket connections and forwards them to the image cache (restore side). */
+extern int image_proxy(char* cache_host);
+
+/* Starts an image cache daemon (restore side). It receives image files through
+ * socket connections and caches them until they are requested by the restore
+ * process. */
+extern int image_cache();
 
 
 #endif	/* IMAGE_REMOTE_H */

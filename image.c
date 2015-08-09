@@ -579,6 +579,8 @@ void up_page_ids_base(void)
 	page_ids += 0x10000;
 }
 
+// <underscore> so they write a page PagemapHead before at the beginning of a
+// pmi file!!
 struct cr_img *open_pages_image_at(int dfd, unsigned long flags, struct cr_img *pmi)
 {
 	unsigned id;

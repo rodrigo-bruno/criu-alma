@@ -42,6 +42,8 @@
 
 #include "setproctitle.h"
 
+#include "image-remote.h"
+
 struct cr_options opts;
 
 void init_opts(void)
@@ -59,6 +61,9 @@ void init_opts(void)
 	opts.cpu_cap = CPU_CAP_DEFAULT;
 	opts.manage_cgroups = CG_MODE_DEFAULT;
 	opts.ps_socket = -1;
+        // <underscore>
+        opts.addr = "localhost";
+        // </underscore>
 }
 
 static int parse_ns_string(const char *ptr)
@@ -235,6 +240,8 @@ int main(int argc, char *argv[], char *envp[])
 		{ "enable-external-sharing", 	no_argument, 		0, 1066 },
 		{ "enable-external-masters", 	no_argument, 		0, 1067 },
                 { "remote",                     no_argument, 		0, 1068 },
+                { "image-cache",                no_argument, 		0, 1069 },
+                { "image-proxy",                required_argument,      0, 1070 },
 		{ },
 	};
 
@@ -614,6 +621,16 @@ int main(int argc, char *argv[], char *envp[])
 
 	if (!strcmp(argv[optind], "page-server"))
 		return cr_page_server(opts.daemon_mode, -1) > 0 ? 0 : 1;
+        
+        // <underscore>
+        if (!strcmp(argv[optind], "image-cache"))
+                // TODO - make image_proxy support other server options
+		return image_cache();
+        
+        if (!strcmp(argv[optind], "image-proxy"))
+                // TODO - make image_proxy support other server options
+		return image_proxy(opts.addr);
+        // </underscore>
 
 	if (!strcmp(argv[optind], "service"))
 		return cr_service(opts.daemon_mode);
@@ -641,6 +658,8 @@ usage:
 "  criu page-server\n"
 "  criu service [<options>]\n"
 "  criu dedup\n"
+"  criu image-cache [<options>]\n"
+"  criu image-proxy [<options>]\n"
 "\n"
 "Commands:\n"
 "  dump           checkpoint a process/tree identified by pid\n"
@@ -653,6 +672,8 @@ usage:
 "  dedup          remove duplicates in memory dump\n"
 "  cpuinfo dump   writes cpu information into image file\n"
 "  cpuinfo check  validates cpu information read from image file\n"
+"  image-cache    launch image-cache service, used for process live migration\n"
+"  image-proxy    launch image-proxy service, used for process live migration\n"
 	);
 
 	if (usage_error) {
@@ -730,7 +751,7 @@ usage:
 "                        when used on restore, as soon as page is restored, it\n"
 "                        will be punched from the image.\n"
 "\n"
-"Page/Service server options:\n"
+"Page/Service/image-cache/image-proxy server options:\n"
 "  --address ADDR        address of server or service\n"
 "  --port PORT           port of page server\n"
 "  -d|--daemon           run in the background after creating socket\n"

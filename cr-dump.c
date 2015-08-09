@@ -395,6 +395,12 @@ err:
 	return ret;
 }
 
+/*
+ * <underscore> This is where memory maps are dumped.
+ * TODO - I will probably need to split areas into smaller areas to be able
+ * to eliminate some unnecessary pages.
+ * TODO - understand the difference between memory mappings and pages...?
+ */
 static int dump_task_mm(pid_t pid, const struct proc_pid_stat *stat,
 		const struct parasite_dump_misc *misc,
 		const struct vm_area_list *vma_area_list,
@@ -1492,6 +1498,7 @@ static int dump_one_task(struct pstree_item *item)
 	if (ret < 0)
 		goto err;
 
+        // <underscore> mappings are collected here!
 	ret = collect_mappings(pid, &vmas);
 	if (ret) {
 		pr_err("Collect mappings (pid: %d) failed with %d\n", pid, ret);
@@ -1596,6 +1603,8 @@ static int dump_one_task(struct pstree_item *item)
 		}
 	}
 
+        // <underscore> This is where page-<#>.img files are created.
+        // TODO - we will have to do it in a page granularity level.
 	ret = parasite_dump_pages_seized(parasite_ctl, &vmas, NULL);
 	if (ret)
 		goto err_cure;

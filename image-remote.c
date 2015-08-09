@@ -18,8 +18,8 @@
 #include "criu-log.h"
 #include "utlist.h"
 
-#define DEFAULT_PUT_PORT 9997
-#define DEFAULT_GET_PORT 9995
+#include "image-remote.h"
+
 #define DEFAULT_HOST "localhost"
 #define PATHLEN 32
 #define DUMP_FINISH "DUMP_FINISH"
