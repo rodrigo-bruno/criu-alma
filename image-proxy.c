@@ -75,7 +75,8 @@ typedef struct rmem {
     PagemapHead* pheader;
     remote_pagemap* pagemap_list;
     u32 pagemap_magic;
-    struct rmem *next, *prev;  
+    struct rmem *next, *prev;
+    sem_t pages_cached;
 } remote_mem;
 
 static pthread_mutex_t pages_lock;
@@ -307,6 +308,7 @@ int unpack_pagemap(remote_image* rimg, remote_mem* rmem)
 int pack_pagemap(remote_mem* rmem, remote_image* rimg) 
 {
     	int ret;
+        remote_pagemap* rpmap = NULL;
         
         // This will be used as writing position for remote buffers.
         int cbytes = 0;
@@ -317,17 +319,14 @@ int pack_pagemap(remote_mem* rmem, remote_image* rimg)
                 return -1;
         }
 
-        ret = pb_pack_object(rimg, cbytes, PB_PAGEMAP_HEAD, rmem->pheader);
+        ret = pb_pack_object(rimg, &cbytes, PB_PAGEMAP_HEAD, rmem->pheader);
         if(!ret) {
                 pr_perror("Error packing header from %s.", rmem->path);
                 return -1;
         }
 
-        for(
-            remote_pagemap* rpmap = rmem->pagemap_list; 
-            rpmap != NULL; 
-            rpmap =   rpmap->next) {
-                ret = pb_pack_object(rimg, cbytes, PB_PAGEMAP, rpmap->pentry);
+        for(rpmap = rmem->pagemap_list; rpmap != NULL; rpmap =   rpmap->next) {
+                ret = pb_pack_object(rimg, &cbytes, PB_PAGEMAP, rpmap->pentry);
                 if(!ret) {
                         pr_perror("Error packing pagemap from %s.", rmem->path);
                         return -1;
@@ -342,70 +341,31 @@ void compress_garbage(remote_mem* rmem) {
     // remote_image).
 }
 
-// TODO - use sockets directly instead of writing to buffers.
-
-void compress_garbage_if_ready(remote_image* rimg) {
-    remote_mem *result, like, *rmem, aux;    
-    int pagemap = strncmp(rimg->path, "pagemap-", 8) ? 0 : 1;
-    
-    
-    if(pagemap) {
-        aux.pagemap_list = NULL;
-       if (unpack_pagemap(rimg, &aux) == -1) {
-            pr_perror("Error unpacking pagemap %s", rimg->path);
-        }
-        strncpy(like.path, aux.path, PATHLEN);
-    }
-    else {
-        strncpy(like.path, rimg->path, PATHLEN);
-    }
+// Get existing rmem or create one and return it.
+remote_mem* get_rmem_for(char* path) {
+    remote_mem *result, like;
+    strncpy(like.path, path, PATHLEN);
     
     pthread_mutex_lock(&pages_lock);
-    
     DL_SEARCH(rmem_head, result, &like, path_cmp_rmem);
-    
-    rmem = result;
     if(!result) {
-        rmem = malloc(sizeof(remote_mem));
-        if(rmem == NULL) {
+        result = malloc(sizeof(remote_mem));
+        if(result == NULL) {
             fprintf(stderr,"Unable to allocate remote_mem structures\n");
+            pthread_mutex_unlock(&pages_lock);
+            return NULL;
         }
         else {
-            DL_APPEND(rmem_head, rmem);
-        }
-        
-        pthread_mutex_unlock(&pages_lock);
-        
-        if(pagemap) {
-            rmem->pagemap = rimg;
-            rmem->pagemap_list = aux.pagemap_list;
-            rmem->pheader = aux.pheader;
-            strncpy(rmem->path, aux.path, PATHLEN);
-        }
-        else {
-            rmem->pages = rimg;
-            strncpy(rmem->path, rimg->path, PATHLEN);
+            result->pagemap_list = NULL;
+            if (sem_init(&(result->pages_cached), 0, 0) != 0) {
+                fprintf(stderr, "Remote image connection semaphore init failed\n");
+                return NULL;  
+            }
+            DL_APPEND(rmem_head, result);
         }
     }
-    
-    else {
-        pthread_mutex_unlock(&pages_lock);
-        if(pagemap) {
-            rmem->pagemap = rimg;
-            rmem->pagemap_list = aux.pagemap_list;
-            rmem->pheader = aux.pheader;
-        }
-        else {
-            rmem->pages = rimg;
-        }
-        
-        compress_garbage(result);
-        // TODO - fix, prepare rimg
-        pack_pagemap(rmem, rimg);
-        // TODO - free memory
-        send_remote_image(rmem->pagemap);
-        send_remote_image(rmem->pages);
-    }
+    pthread_mutex_unlock(&pages_lock);
+    return result;
 }
 
 #endif
@@ -477,20 +437,42 @@ int send_remote_image(remote_image* rimg) {
 
 void* buffer_remote_image(void* ptr) {
     remote_image* rimg = (remote_image*) ptr;
-    // TODO - handle pagemap or handle pages, or normal way.
     // TODO - read objects directly from socket and write new objects directly
     // to the new socket?
-    if (recv_remote_image(rimg)) {
-        return NULL;
-    }
+
     
 #if GC_COMPRESSION
-    if(!strncmp(rimg->path, "pages-", 6) || !strncmp(rimg->path, "pagemap-", 8)) {
-        compress_garbage_if_ready(rimg);
+    if(!strncmp(rimg->path, "pages-", 6)) {
+        remote_mem* rmem = get_rmem_for(rimg->path);
+        rmem->pages = rimg;
+        if (recv_remote_image(rimg)) {
+            return NULL;
+        }
+        sem_post(&(rmem->pages_cached));
+        return NULL;
+    }
+    else if(!strncmp(rimg->path, "pagemap-", 8)) {
+        remote_mem *rmem1, rmem2;
+        if (unpack_pagemap(rimg, &rmem2) == -1) {
+            pr_perror("Error unpacking pagemap %s", rimg->path);
+        }
+        rmem1 = get_rmem_for(rmem2.path);
+        rmem1->pagemap = rimg;
+        rmem1->pagemap_list = rmem2.pagemap_list;
+        rmem1->pheader = rmem2.pheader;
+        sem_wait(&(rmem1->pages_cached));
+        compress_garbage(rmem1);
+        // TODO - pack pagemap
+        // TODO - free memory
+        send_remote_image(rmem1->pagemap);
+        send_remote_image(rmem1->pages);
         return NULL;
     }
 #endif
     
+    if (recv_remote_image(rimg)) {
+        return NULL;
+    }
     send_remote_image(rimg);
     return NULL;
 }
