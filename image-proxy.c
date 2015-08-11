@@ -97,71 +97,14 @@ int init_gc_compression() {
     return 0;
 }
 
-int rbuff_read(remote_buffer** cbuf, int* cbytes, void* buf, size_t len) {
-  
-    if((*cbuf) == NULL) {
-        // This means that we hit the final buffer (end of the list).
-        return 0;
-    }
-    // Easy way
-    if(*cbytes + len < (*cbuf)->nbytes) {
-        memcpy(buf, (*cbuf)->buffer + *cbytes, len);
-        *cbytes += len;
-        return len;
-    } 
-    // Hard way (this works if len <= BUF_SIZE)
-    else {
-        size_t n = (*cbuf)->nbytes - *cbytes;
-        // Copy the rest from the current buffer
-        memcpy(buf, (*cbuf)->buffer + *cbytes, n);
-        // Next buffer
-        *cbuf = (*cbuf)->next;        
-        *cbytes = 0;
-        if(*cbuf == NULL) {
-            return n;
-        }
-        // Copy more from the next buffer
-        memcpy( buf + n, (*cbuf)->buffer, len - n);
-        *cbytes = len - n;
-        return len;
-    }
-}
-
-int rbuff_write(remote_image* rimg, int* cbytes, void* buf, size_t len) {
-    remote_buffer* cbuf = rimg->buf_head->prev;
-    // Easy way
-    if(*cbytes + len < BUF_SIZE) {
-        memcpy(cbuf->buffer + *cbytes, buf, len);
-        *cbytes += len;
-        return len;
-    }
-    // Hard way
-    else {
-        size_t n = BUF_SIZE - len;
-        memcpy(cbuf->buffer + *cbytes, buf, n);
-        remote_buffer* new = malloc(sizeof (remote_buffer));
-        if(new == NULL) {
-                fprintf(stderr,"Unable to allocate remote_buffer structures\n");
-                return n;
-        }
-        DL_APPEND(rimg->buf_head, new);
-        cbuf = new;
-        *cbytes = 0;
-        memcpy(cbuf->buffer, buf + n, len - n);
-        *cbytes = len - n;
-        return len;
-    }
-}
-
-int pb_unpack_object(
-    remote_buffer** cbuf, int* cbytes, int eof, int type, void** pobj) {
+int pb_unpack_object(int fd, int eof, int type, void** pobj) {
         u8 local[PB_PKOBJ_LOCAL_SIZE];
 	void *buf = (void *)&local;
         int ret;
         u32 size;
         
         // Read object size
-	ret = rbuff_read(cbuf, cbytes, &size, sizeof(size));
+	ret = read(fd, &size, sizeof(size));
 	if (ret == 0) {
                 if(eof) {
                     return 0;
@@ -180,7 +123,7 @@ int pb_unpack_object(
 	}
 
         // Read object
-	ret = rbuff_read(cbuf, cbytes, buf, size);
+	ret = read(fd, buf, size);
 	if (ret < 0) {
 		pr_perror("Can't read %d bytes.", size);
 		return -1;
@@ -199,7 +142,7 @@ int pb_unpack_object(
 }
 
 int pb_pack_object(
-    remote_image* rimg, int* cbytes, int type, void* obj) {
+    remote_image* rimg, int type, void* obj) {
         u8 local[PB_PKOBJ_LOCAL_SIZE];
         void *buf = (void *)&local;
         u32 size, packed;
@@ -217,13 +160,13 @@ int pb_pack_object(
                 pr_err("Failed packing PB object %p\n", obj);
                 return -1;
         }
-        ret = rbuff_write(rimg, cbytes, &size, sizeof(size));
+        ret = write(rimg->dst_fd, &size, sizeof(size));
         if(ret != sizeof(size)) {
 		pr_perror("Could not write %zu bytes (obj size)", sizeof(size));
 		return -1;
         }
         
-        ret = rbuff_write(rimg, cbytes, buf, size);
+        ret = write(rimg->dst_fd, buf, size);
         if (ret != size) {
 		pr_perror("Could not write %u bytes (obj)", size);
 		return -1;
@@ -233,13 +176,13 @@ int pb_pack_object(
 }
 
 // NOTE: I assume the double magic way (check image.c img_check_magic).
-int rimg_check_magic(remote_buffer** cbuf, int* cbytes, int type) {
+int rimg_check_magic(int fd, int type) {
     u32 magic;
     
-    if (rbuff_read(cbuf, cbytes, &magic, sizeof(magic)) < 0) {
+    if (read(fd, &magic, sizeof(magic)) < 0) {
 	return -1;
     }
-    if (rbuff_read(cbuf, cbytes, &magic, sizeof(magic)) < 0) {
+    if (read(fd, &magic, sizeof(magic)) < 0) {
 	return -1;
     }
     
@@ -251,8 +194,8 @@ int rimg_check_magic(remote_buffer** cbuf, int* cbytes, int type) {
     return magic;
 }
 
-int rimg_write_magic(u32 magic, remote_image* rimg, int* cbytes) {
-    if(rbuff_write(rimg, cbytes, &magic, sizeof(magic)) != sizeof(magic)) {
+int rimg_write_magic(u32 magic, remote_image* rimg) {
+    if(write(rimg->dst_fd, &magic, sizeof(magic)) != sizeof(magic)) {
         pr_err("Could not write magic for %s\n", rimg->path);
         return -1;
     }
@@ -263,18 +206,14 @@ int unpack_pagemap(remote_image* rimg, remote_mem* rmem)
 {
 	int ret;
         void* pobj = NULL;
-        
-        // These two will be used as reading position for remote buffers.
-        remote_buffer* cbuf = rimg->buf_head;
-        int cbytes = 0;
-        
-        rmem->pagemap_magic = rimg_check_magic(&cbuf, &cbytes, CR_FD_PAGEMAP);
+               
+        rmem->pagemap_magic = rimg_check_magic(rimg->src_fd, CR_FD_PAGEMAP);
         if(rmem->pagemap_magic == -1) {
             pr_err("Magic could not be verified for %s\n", rimg->path);
             return -1;
         }
 
-        ret = pb_unpack_object(&cbuf, &cbytes, 0, PB_PAGEMAP_HEAD, &pobj);
+        ret = pb_unpack_object(rimg->src_fd, 0, PB_PAGEMAP_HEAD, &pobj);
         if (ret == -1) {
             pr_perror("Error unpacking header from %s.", rimg->path);
             return -1;
@@ -285,7 +224,7 @@ int unpack_pagemap(remote_image* rimg, remote_mem* rmem)
         printf("PagemapHead pages_id -> %d\n", rmem->pheader->pages_id);
 
         while (1) {
-               ret = pb_unpack_object(&cbuf, &cbytes, 1, PB_PAGEMAP, &pobj);
+               ret = pb_unpack_object(rimg->src_fd, 1, PB_PAGEMAP, &pobj);
                 if (ret == -1) {
                     pr_perror("Error unpacking header from %s.", rimg->path);
                     return -1;
@@ -305,28 +244,25 @@ int unpack_pagemap(remote_image* rimg, remote_mem* rmem)
 	return 1;
 }
 
-int pack_pagemap(remote_mem* rmem, remote_image* rimg) 
+int pack_pagemap(remote_image* rimg, remote_mem* rmem) 
 {
     	int ret;
         remote_pagemap* rpmap = NULL;
-        
-        // This will be used as writing position for remote buffers.
-        int cbytes = 0;
-        
-        ret = rimg_write_magic(rmem->pagemap_magic, rimg, &cbytes);
+               
+        ret = rimg_write_magic(rmem->pagemap_magic, rimg);
         if(ret == -1) {
                 pr_err("Could not write magic for %s\n", rmem->path);
                 return -1;
         }
 
-        ret = pb_pack_object(rimg, &cbytes, PB_PAGEMAP_HEAD, rmem->pheader);
+        ret = pb_pack_object(rimg, PB_PAGEMAP_HEAD, rmem->pheader);
         if(!ret) {
                 pr_perror("Error packing header from %s.", rmem->path);
                 return -1;
         }
 
         for(rpmap = rmem->pagemap_list; rpmap != NULL; rpmap =   rpmap->next) {
-                ret = pb_pack_object(rimg, &cbytes, PB_PAGEMAP, rpmap->pentry);
+                ret = pb_pack_object(rimg, PB_PAGEMAP, rpmap->pentry);
                 if(!ret) {
                         pr_perror("Error packing pagemap from %s.", rmem->path);
                         return -1;
@@ -437,10 +373,7 @@ int send_remote_image(remote_image* rimg) {
 
 void* buffer_remote_image(void* ptr) {
     remote_image* rimg = (remote_image*) ptr;
-    // TODO - read objects directly from socket and write new objects directly
-    // to the new socket?
 
-    
 #if GC_COMPRESSION
     if(!strncmp(rimg->path, "pages-", 6)) {
         remote_mem* rmem = get_rmem_for(rimg->path);
@@ -461,10 +394,9 @@ void* buffer_remote_image(void* ptr) {
         rmem1->pagemap_list = rmem2.pagemap_list;
         rmem1->pheader = rmem2.pheader;
         sem_wait(&(rmem1->pages_cached));
-        compress_garbage(rmem1);
-        // TODO - pack pagemap
+        compress_garbage(rmem1); // TODO - check for errors
+        pack_pagemap(rimg, rmem1); // TODO - check for error
         // TODO - free memory
-        send_remote_image(rmem1->pagemap);
         send_remote_image(rmem1->pages);
         return NULL;
     }
