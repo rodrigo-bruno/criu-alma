@@ -15,6 +15,7 @@
 #include <time.h>
 
 #include "image-remote.h"
+#include "criu-log.h"
 
 #define DEFAULT_LISTEN 50
 #define PATHLEN 32
@@ -74,16 +75,13 @@ void* get_remote_image(void* ptr) {
                 curr_offset = 0;
             }
             else if(curr_offset == curr_buf->nbytes) {
-// DEBUG
-for(curr_buf  =rimg->buf_head, n = 1; curr_buf->next != NULL; curr_buf = curr_buf->next, n++) {}
-// DEBUG
-                printf("Finished forwarding %s (%d blocks from %d, %d). Done.\n", rimg->path, nblocks, n, curr_offset);
+                pr_info("Finished forwarding %s (%d blocks, %d bytes on last block)\n", rimg->path, nblocks, curr_offset);
                 close(dst_fd);
                 return NULL;
             }
         }
         else {
-             fprintf(stderr,"Write on %s socket failed (n=%d, %s)\n", rimg->path, n, strerror(errno));
+             pr_perror("Write on %s socket failed (ret = %d)", rimg->path, n);
              return NULL;
         }
     }
@@ -107,7 +105,8 @@ void* put_remote_image(void* ptr) {
                     BUF_SIZE - curr_buf->nbytes);
         if (n == 0) {
             time(&t);
-            printf("Finished receiving %s (%d blocks, %d bytes on last block) %s", rimg->path, nblocks, rimg->buf_head->prev->nbytes, ctime(&t));
+            // TODO - remove timestamp
+            pr_info("Finished receiving %s (%d blocks, %d bytes on last block) %s\n", rimg->path, nblocks, rimg->buf_head->prev->nbytes, ctime(&t));
             close(src_fd);
             pthread_mutex_lock(&lock);
             DL_APPEND(head, rimg);
@@ -121,7 +120,7 @@ void* put_remote_image(void* ptr) {
             if(curr_buf->nbytes == BUF_SIZE) {
                 remote_buffer* buf = malloc(sizeof (remote_buffer));
                 if(buf == NULL) {
-                    fprintf(stderr,"Unable to allocate remote_buffer structures\n");
+                    pr_perror("Unable to allocate remote_buffer structures");
                 }
                 buf->nbytes = 0;
                 DL_APPEND(rimg->buf_head, buf);
@@ -131,7 +130,7 @@ void* put_remote_image(void* ptr) {
             
         }
         else {
-            fprintf(stderr,"Read on %s socket failed\n", rimg->path);
+            pr_perror("Read on %s socket failed", rimg->path);
             return NULL;
         }
     }
@@ -148,7 +147,7 @@ remote_image* wait_for_image(int cli_fd, const char* path) {
         pthread_mutex_unlock(&lock);
         if (result != NULL) {
             if (write(cli_fd, path, PATHLEN) < 1) {
-                fprintf(stderr,"Unable to send ack to get image connection\n");
+                pr_perror("Unable to send ack to get image connection");
                 close(cli_fd);
                 return NULL;
             }
@@ -156,7 +155,7 @@ remote_image* wait_for_image(int cli_fd, const char* path) {
         }
         if (finished && !putting) {
             if (write(cli_fd, DUMP_FINISH, PATHLEN) < 1) {
-                fprintf(stderr,"Unable to send nack to get image connection\n");
+                pr_perror("Unable to send nack to get image connection");
             }
             close(cli_fd);
             return NULL;
@@ -177,20 +176,20 @@ void* accept_get_image_connections(void* null) {
         
         cli_fd = accept(get_fd, (struct sockaddr *) &cli_addr, &clilen);
         if (cli_fd < 0) {
-            fprintf(stderr,"Unable to accept get image connection\n");
+            pr_perror("Unable to accept get image connection");
             continue;
         }
         
         n = read(cli_fd, path_buf, PATHLEN);
         if (n < 0) {
-            fprintf(stderr,"Error reading from checkpoint remote image socket\n");
+            pr_perror("Error reading from checkpoint remote image socket");
             continue;
         } else if (n == 0) {
-            fprintf(stderr,"Remote checkpoint image socket closed before receiving path\n");
+            pr_perror("Remote checkpoint image socket closed before receiving path");
             continue;
         }
         
-        printf("Received GET for %s, from %d\n", path_buf, cli_fd);
+        pr_info("Received GET for %s.\n", path_buf);
         
         img = wait_for_image(cli_fd, path_buf);
         if(!img) {
@@ -203,7 +202,7 @@ void* accept_get_image_connections(void* null) {
                             NULL, 
                             get_remote_image, 
                             (void*) img)) {
-            fprintf(stderr,"Unable to create put thread\n");
+            pr_perror("Unable to create put thread");
             return NULL;
         } 
     }
@@ -221,16 +220,16 @@ void* accept_put_image_connections(void* null) {
         
         cli_fd = accept(put_fd, (struct sockaddr *) &cli_addr, &clilen);
         if (cli_fd < 0) {
-            fprintf(stderr,"Unable to accept put image connection\n");
+            pr_perror("Unable to accept put image connection");
             continue;
         }
         
         n = read(cli_fd, path_buf, PATHLEN);
         if (n < 0) {
-            fprintf(stderr,"Error reading from checkpoint remote image socket\n");
+            pr_perror("Error reading from checkpoint remote image socket");
             continue;
         } else if (n == 0) {
-            fprintf(stderr,"Remote checkpoint image socket closed before receiving path\n");
+            pr_perror("Remote checkpoint image socket closed before receiving path");
             continue;
         }
         
@@ -244,13 +243,13 @@ void* accept_put_image_connections(void* null) {
         
         remote_image* img = malloc(sizeof (remote_image));
         if (img == NULL) {
-            fprintf(stderr,"Unable to allocate remote_image structures\n");
+            pr_perror("Unable to allocate remote_image structures");
             return NULL;
         }
         
         remote_buffer* buf = malloc(sizeof (remote_buffer));
         if(buf == NULL) {
-            fprintf(stderr,"Unable to allocate remote_buffer structures\n");
+            pr_perror("Unable to allocate remote_buffer structures");
             return NULL;
         }
         
@@ -265,11 +264,11 @@ void* accept_put_image_connections(void* null) {
                             NULL, 
                             put_remote_image, 
                             (void*) img)) {
-            fprintf(stderr,"Unable to create put thread\n");
+            pr_perror("Unable to create put thread");
             return NULL;
         } 
         time(&t);
-        printf("Reveiced PUT %s, from %d %s", img->path, img->src_fd, ctime(&t));
+        pr_info("Reveiced PUT request for %s. %s\n", img->path, ctime(&t));
     }
 }
 
@@ -279,7 +278,7 @@ int prepare_server_socket(int port) {
     
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
-        fprintf(stderr, "Unable to open image socket\n");
+        pr_perror("Unable to open image socket");
         return -1;
     }
 
@@ -294,17 +293,17 @@ int prepare_server_socket(int port) {
             SO_REUSEADDR,
             &sockopt,
             sizeof (sockopt)) == -1) {
-        fprintf(stderr, "Unable to set SO_REUSEADDR\n");
+        pr_perror("Unable to set SO_REUSEADDR");
         return -1;
     }
 
     if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof (serv_addr)) < 0) {
-        fprintf(stderr, "Unable to bind image socket\n");
+        pr_perror("Unable to bind image socket");
         return -1;
     }
 
     if (listen(sockfd, DEFAULT_LISTEN)) {
-        fprintf(stderr, "Unable to listen image socket\n");
+        pr_perror("Unable to listen image socket");
         return -1;
     }
     
@@ -318,29 +317,29 @@ int image_cache(unsigned short cache_port) {
     
     put_port = cache_port;
     get_port = DEFAULT_GET_PORT;
-    printf ("Put Port %d, Get Port %d\n", put_port, get_port);
+    pr_info("Put Port %d, Get Port %d\n", put_port, get_port);
 
     put_fd = prepare_server_socket(put_port);
     get_fd = prepare_server_socket(get_port);
     
     if (pthread_mutex_init(&lock, NULL) != 0) {
-        fprintf(stderr,"Remote image connection mutex init failed\n");
+        pr_perror("Remote image connection mutex init failed");
         return -1;
     }
 
     if (sem_init(&semph, 0, 0) != 0) {
-        fprintf(stderr,"Remote image connection semaphore init failed\n");
+        pr_perror("Remote image connection semaphore init failed");
         return -1;
     }
     
     if (pthread_create(
             &put_thr, NULL, accept_put_image_connections, NULL)) {
-        fprintf(stderr, "Unable to create put thread\n");
+        pr_perror("Unable to create put thread");
         return -1;
     }
     if (pthread_create(
             &get_thr, NULL, accept_get_image_connections, NULL)) {
-        fprintf(stderr, "Unable to create get thread\n");
+        pr_perror("Unable to create get thread");
         return -1;
     }
     

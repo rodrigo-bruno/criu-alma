@@ -22,7 +22,6 @@
 #include "protobuf/pagemap.pb-c.h"
 #include "image-desc.h"
 
-// TODO - turn printfs on pr_pinfos
 // TODO - share defines in a single header.
 #define DEFAULT_LISTEN 50
 #define PATHLEN 32
@@ -100,14 +99,6 @@ int path_cmp_rmem(remote_mem *a, remote_mem *b) {
     return strcmp(a->path, b->path);
 } 
 
-int init_gc_compression() {
-    if (pthread_mutex_init(&pages_lock, NULL) != 0) {
-        fprintf(stderr,"GC compression mutex init failed\n");
-        return -1;
-    }
-    return 0;
-}
-
 int pb_unpack_object(int fd, int eof, int type, void** pobj) {
         u8 local[PB_PKOBJ_LOCAL_SIZE];
 	void *buf = (void *)&local;
@@ -121,7 +112,7 @@ int pb_unpack_object(int fd, int eof, int type, void** pobj) {
                 if(eof) {
                     return ret;
                 } else {
-                        pr_err("Unexpected EOF.\n");
+                        pr_perror("Unexpected EOF.");
                         return -1;
                 }		
 	} else if (ret < sizeof(size)) {
@@ -129,7 +120,7 @@ int pb_unpack_object(int fd, int eof, int type, void** pobj) {
 		return -1;
 	}
 	if (size > PB_PKOBJ_LOCAL_SIZE) {
-		pr_err("Stack buffer is not enough for PB header (%u bytes)\n",
+		pr_perror("Stack buffer is not enough for PB header (%u bytes)",
                         size);
 		return -1;
 	}
@@ -148,7 +139,7 @@ int pb_unpack_object(int fd, int eof, int type, void** pobj) {
 
 	*pobj = cr_pb_descs[type].unpack(NULL, size, buf);
 	if (!*pobj) {
-		pr_err("Failed unpacking object %p\n",*pobj);
+		pr_perror("Failed unpacking object %p",*pobj);
 		return -1;
 	}
         
@@ -164,14 +155,14 @@ int pb_pack_object(int fd, int type, void* obj) {
 
         size = cr_pb_descs[type].getpksize(obj);
         if (size > PB_PKOBJ_LOCAL_SIZE) {
-		pr_err("Stack buffer is not enough for PB header (%u bytes)\n",
+		pr_perror("Stack buffer is not enough for PB header (%u bytes)",
                         size);
 		return -1;
         }
 
         packed = cr_pb_descs[type].pack(obj, buf);
         if (packed != size) {
-                pr_err("Failed packing PB object %p\n", obj);
+                pr_perror("Failed packing PB object %p", obj);
                 return -1;
         }
         ret = write(fd, &size, sizeof(size));
@@ -194,27 +185,27 @@ int pb_pack_object(int fd, int type, void* obj) {
 // NOTE: I assume the double magic way (check image.c img_check_magic).
 int rimg_read_magic(int fd, remote_mem* rmem) {
     if (read(fd, &(rmem->pagemap_magic_a), sizeof(u32)) != sizeof(u32)) {
-        pr_err("Could not read magic\n");
+        pr_perror("Could not read magic.");
 	return -1;
     }
     if (read(fd, &(rmem->pagemap_magic_b), sizeof(u32)) != sizeof(u32)) {
-        pr_err("Could not read magic\n");
+        pr_perror("Could not read magic.");
 	return -1;
     }
 
-    return 1;
+    return sizeof(rmem->pagemap_magic_a) + sizeof(rmem->pagemap_magic_b);
 }
 // NOTE: I assume the double magic way (check image.c img_check_magic).
 int rimg_write_magic(int fd, remote_mem* rmem) {
     if(write(fd, &(rmem->pagemap_magic_a), sizeof(u32)) != sizeof(u32)) {
-        pr_err("Could not write magic.\n");
+        pr_perror("Could not write magic.");
         return -1;
     }
     if(write(fd, &(rmem->pagemap_magic_b), sizeof(u32)) != sizeof(u32)) {
-        pr_err("Could not write magic.\n");
+        pr_perror("Could not write magic.");
         return -1;
     }
-    return 1;
+    return sizeof(rmem->pagemap_magic_a) + sizeof(rmem->pagemap_magic_b);
 }
 
 int unpack_pagemap(remote_image* rimg, remote_mem* rmem)
@@ -224,7 +215,7 @@ int unpack_pagemap(remote_image* rimg, remote_mem* rmem)
         int nbytes = 0;
                
         if(rimg_read_magic(rimg->src_fd, rmem) == -1) {
-            pr_err("Magic could not be verified for %s\n", rimg->path);
+            pr_perror("Magic could not be verified for %s", rimg->path);
             return -1;
         }
 
@@ -243,9 +234,9 @@ int unpack_pagemap(remote_image* rimg, remote_mem* rmem)
                     pr_perror("Error unpacking header from %s.", rimg->path);
                     return -1;
                 } else if (ret == 0) {
-                    printf("Finished unpacking %s.\n", rimg->path);
                     close(rimg->src_fd);
-                    break;
+                    pr_info("Unpacking done for %s.n", rimg->path);
+                    return nbytes;
                 }
                 nbytes += ret;
                 remote_pagemap* rpagemap = malloc(sizeof(remote_pagemap));
@@ -258,7 +249,6 @@ int unpack_pagemap(remote_image* rimg, remote_mem* rmem)
                 printf("pagemap entry -> pages = %u, vaddr = %p\n", rpagemap->pentry->nr_pages, decode_pointer(rpagemap->pentry->vaddr));
                 DL_APPEND(rmem->pagemap_list, rpagemap);
         }
-	return nbytes;
 }
 
 int pack_pagemap(remote_image* rimg, remote_mem* rmem) 
@@ -268,7 +258,7 @@ int pack_pagemap(remote_image* rimg, remote_mem* rmem)
         int nbytes = 0;
                
         if(rimg_write_magic(rimg->dst_fd, rmem) < 0) {
-                pr_err("Could not write magic for %s\n", rmem->path);
+                pr_perror("Could not write magic for %s", rmem->path);
                 return -1;
         }
 
@@ -288,6 +278,7 @@ int pack_pagemap(remote_image* rimg, remote_mem* rmem)
                 nbytes += ret;
         }
         close(rimg->dst_fd);
+        pr_info("Packing done for %s.n", rimg->path);
         return nbytes;
 }
 
@@ -301,7 +292,7 @@ int recv_garbage_list(int fd, remote_mem* rmem) {
     while(1) {
         n = read(fd, &vaddr, sizeof(vaddr));
         if(!n) {
-            printf("Finished receiving garbage list.\n");
+            pr_info("Finished receiving garbage list.\n");
             close(fd);
             break;
         }
@@ -471,7 +462,7 @@ remote_mem* get_rmem_for(char* path) {
     if(!result) {
         result = malloc(sizeof(remote_mem));
         if(result == NULL) {
-            fprintf(stderr,"Unable to allocate remote_mem structures\n");
+            pr_perror("Unable to allocate remote_mem structures");
             pthread_mutex_unlock(&pages_lock);
             return NULL;
         }
@@ -480,17 +471,15 @@ remote_mem* get_rmem_for(char* path) {
             result->garbage_list = NULL;
             strncpy(result->path, path, PATHLEN);
             if (sem_init(&(result->pages_cached), 0, 0) != 0) {
-                fprintf(stderr, "Pages cached semaphore init failed\n");
+                pr_perror("Pages cached semaphore init failed");
                 pthread_mutex_unlock(&pages_lock);
                 return NULL;  
             }
             if (sem_init(&(result->garbage_cached), 0, 0) != 0) {
-                fprintf(stderr, "Gargabe cached semaphore init failed\n");
+                pr_perror("Gargabe cached semaphore init failed");
                 pthread_mutex_unlock(&pages_lock);
                 return NULL;  
             }
-            // DEBUG
-            printf("Appending remote_mem for %s\n", rmem_head->path);
             DL_APPEND(rmem_head, result);
         }
     }
@@ -511,7 +500,7 @@ int recv_remote_image(remote_image* rimg) {
                     BUF_SIZE - curr_buf->nbytes);
         if (n == 0) {
             close(src_fd);
-            printf("Finished receiving %s. Forwarding...\n", rimg->path);
+            pr_info("Finished receiving %s.\n", rimg->path);
             break;
         }
         else if (n > 0) {
@@ -519,7 +508,7 @@ int recv_remote_image(remote_image* rimg) {
             if(curr_buf->nbytes == BUF_SIZE) {
                 remote_buffer* buf = malloc(sizeof (remote_buffer));
                 if(buf == NULL) {
-                    fprintf(stderr,"Unable to allocate remote_buffer structures\n");
+                    pr_perror("Unable to allocate remote_buffer structures");
                     return -1;
                 }
                 buf->nbytes = 0;
@@ -529,7 +518,7 @@ int recv_remote_image(remote_image* rimg) {
             
         }
         else {
-            fprintf(stderr,"Read on %s socket failed\n", rimg->path);
+            pr_perror("Read on %s socket failed", rimg->path);
             return -1;
         }
     }
@@ -553,13 +542,13 @@ int send_remote_image(remote_image* rimg) {
                 curr_offset = 0;
             }
             else if(curr_offset == curr_buf->nbytes) {
-                printf("Finished forwarding %s. Done.\n", rimg->path);
+                pr_info("Finished forwarding %s.\n", rimg->path);
                 close(dst_fd);
                 break;
             }
         }
         else {
-             fprintf(stderr,"Write on %s socket failed (n=%d)\n", rimg->path, n);
+             pr_perror("Write on %s socket failed (n=%d)", rimg->path, n);
         }
     }
     return 0;
@@ -584,8 +573,6 @@ void* buffer_remote_image(void* ptr) {
             pr_perror("Error unpacking pagemap %s", rimg->path);
             return NULL;
         }
-        // DEBUG
-        printf("pagemap %s unpacked\n", rimg->path);
         rmem1 = get_rmem_for(rmem2.path);
         rmem1->pagemap = rimg;
         rmem1->pagemap_list = rmem2.pagemap_list;
@@ -598,21 +585,19 @@ void* buffer_remote_image(void* ptr) {
         
         /*
         sem_wait(&(rmem1->garbage_cached));
-        printf("compressing %s...\n", rmem1->path);
         if( compress_garbage(rmem1) == -1) {
-            printf("Compress garbage for %s failed.", rmem1->path);
+            pr_perror("Compress garbage for %s failed.", rmem1->path);
             return NULL;
         }
-        printf("compressing %s done\n", rmem1->path);
+        pr_info("compressing done for %s.\n", rmem1->path);
         */
         if(pack_pagemap(rimg, rmem1) == -1) {
             pr_perror("Error packing pagemap %s", rimg->path);
             return NULL;
         }
-        printf("packing %s done\n", rimg->path);
+        
         // TODO - free memory
         send_remote_image(rmem1->pages);
-        printf("sending %s done\n", rmem1->path);
         return NULL;
     }
     else if(!strncmp(rimg->path, "garbage-", 8)) {
@@ -650,41 +635,41 @@ void* accept_remote_image_connections(void* null) {
     while (1) {
         src_fd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
         if (src_fd < 0) {
-            fprintf(stderr,"Unable to accept checkpoint image connection\n");
+            pr_perror("Unable to accept checkpoint image connection");
             continue;
         }
 
         remote_image* img = malloc(sizeof (remote_image));
         if (img == NULL) {
-            fprintf(stderr,"Unable to allocate remote_image structures\n");
+            pr_perror("Unable to allocate remote_image structures");
             return NULL;
         }
         
         remote_buffer* buf = malloc(sizeof (remote_buffer));
         if(buf == NULL) {
-            fprintf(stderr,"Unable to allocate remote_buffer structures\n");
+            pr_perror("Unable to allocate remote_buffer structures");
             return NULL;
         }
 
         n = read(src_fd, img->path, PATHLEN);
         if (n < 0) {
-            fprintf(stderr,"Error reading from checkpoint remote image socket\n");
+            pr_perror("Error reading from checkpoint remote image socket");
             continue;
         } else if (n == 0) {
-            fprintf(stderr,"Remote checkpoint image socket closed before receiving path\n");
+            pr_perror("Remote checkpoint image socket closed before receiving path");
             continue;
         }
         
         
         dst_fd = socket(AF_INET, SOCK_STREAM, 0);
         if (dst_fd < 0) {
-            fprintf(stderr,"Unable to open recover image socket\n");
+            pr_perror("Unable to open recover image socket");
             return NULL;
         }
 
         restore_server = gethostbyname(dst_host);
         if (restore_server == NULL) {
-            fprintf(stderr,"Unable to get host by name (%s)\n", dst_host);
+            pr_perror("Unable to get host by name (%s)", dst_host);
             return NULL;
         }
 
@@ -697,17 +682,17 @@ void* accept_remote_image_connections(void* null) {
 
         n = connect(dst_fd, (struct sockaddr *) &serv_addr, sizeof (serv_addr));
         if (n < 0) {
-            fprintf(stderr,"Unable to connect to remote restore host %s: %s\n", dst_host, strerror(errno));
+            pr_perror("Unable to connect to remote restore host %s: %s", dst_host, strerror(errno));
             return NULL;
         }
 
         if (write(dst_fd, img->path, PATHLEN) < 1) {
-            fprintf(stderr,"Unable to send path to remote image connection\n");
+            pr_perror("Unable to send path to remote image connection");
             return NULL;
         }
         
         if (!strncmp(img->path, DUMP_FINISH, sizeof (DUMP_FINISH))) {
-            printf("Dump side is finished!\n");
+            pr_info("Dump side is finished!\n");
             free(img);
             free(buf);
             close(src_fd);
@@ -725,11 +710,11 @@ void* accept_remote_image_connections(void* null) {
                             NULL, 
                             buffer_remote_image, 
                             (void*) img)) {
-                fprintf(stderr,"Unable to create socket thread\n");
+                pr_perror("Unable to create socket thread");
                 return NULL;
         } 
         
-        printf("Reveiced %s, from %d to %d\n", img->path, img->src_fd, img->dst_fd);
+        pr_info("Reveiced put request for %s.\n", img->path);
         DL_APPEND(head, img);
     }
 }
@@ -741,16 +726,16 @@ int image_proxy(char* cache_host, unsigned short cache_port) {
     
     dst_host = cache_host;
     dst_port = cache_port;
-    printf ("Local Port %d, Remote Host %s:%hu\n", server_port, dst_host, dst_port);
+    pr_info("Proxy Port %d, Destination Host %s:%hu\n", server_port, dst_host, dst_port);
     
     if (sem_init(&semph, 0, 0) != 0) {
-        fprintf(stderr, "Remote image connection semaphore init failed\n");
+        pr_perror("Remote image connection semaphore init failed");
         return -1;
     }
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
-        fprintf(stderr, "Unable to open image socket\n");
+        pr_perror("Unable to open image socket");
         return -1;
     }
 
@@ -765,23 +750,30 @@ int image_proxy(char* cache_host, unsigned short cache_port) {
             SO_REUSEADDR,
             &sockopt,
             sizeof (sockopt)) == -1) {
-        fprintf(stderr, "Unable to set SO_REUSEADDR\n");
+        pr_perror("Unable to set SO_REUSEADDR");
         return -1;
     }
 
     if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof (serv_addr)) < 0) {
-        fprintf(stderr, "Unable to bind image socket\n");
+        pr_perror("Unable to bind image socket");
         return -1;
     }
 
     if (listen(sockfd, DEFAULT_LISTEN)) {
-        fprintf(stderr, "Unable to listen image socket\n");
+        pr_perror("Unable to listen image socket");
         return -1;
     }
+    
+#if GC_COMPRESSION
+    if (pthread_mutex_init(&pages_lock, NULL) != 0) {
+        pr_perror("GC compression mutex init failedpr_perror");
+        return -1;
+    }
+#endif
 
     if (pthread_create(
             &sock_thr, NULL, accept_remote_image_connections, NULL)) {
-        fprintf(stderr, "Unable to create socket thread\n");
+        pr_perror("Unable to create socket thread");
         return -1;
 
     }

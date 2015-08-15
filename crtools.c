@@ -627,11 +627,9 @@ int main(int argc, char *argv[], char *envp[])
         
         // <underscore>
         if (!strcmp(argv[optind], "image-cache"))
-                // TODO - make image_proxy support other server options
 		return image_cache(opts.ps_port);
         
         if (!strcmp(argv[optind], "image-proxy"))
-                // TODO - make image_proxy support other server options
 		return image_proxy(opts.addr, opts.ps_port);
         // </underscore>
 
