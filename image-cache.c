@@ -74,13 +74,16 @@ void* get_remote_image(void* ptr) {
                 curr_offset = 0;
             }
             else if(curr_offset == curr_buf->nbytes) {
-                printf("Finished forwarding %s (%d blocks). Done.\n", rimg->path, nblocks);
+// DEBUG
+for(curr_buf  =rimg->buf_head, n = 1; curr_buf->next != NULL; curr_buf = curr_buf->next, n++) {}
+// DEBUG
+                printf("Finished forwarding %s (%d blocks from %d, %d). Done.\n", rimg->path, nblocks, n, curr_offset);
                 close(dst_fd);
                 return NULL;
             }
         }
         else {
-             fprintf(stderr,"Write on %s socket failed (n=%d)\n", rimg->path, n);
+             fprintf(stderr,"Write on %s socket failed (n=%d, %s)\n", rimg->path, n, strerror(errno));
              return NULL;
         }
     }
@@ -104,7 +107,7 @@ void* put_remote_image(void* ptr) {
                     BUF_SIZE - curr_buf->nbytes);
         if (n == 0) {
             time(&t);
-            printf("Finished receiving %s (%d blocks) %s", rimg->path, nblocks, ctime(&t));
+            printf("Finished receiving %s (%d blocks, %d bytes on last block) %s", rimg->path, nblocks, rimg->buf_head->prev->nbytes, ctime(&t));
             close(src_fd);
             pthread_mutex_lock(&lock);
             DL_APPEND(head, rimg);
@@ -308,12 +311,12 @@ int prepare_server_socket(int port) {
     return sockfd;
 }
 
-int image_cache(int put, int get) {
+int image_cache(unsigned short cache_port) {
     
     pthread_t get_thr, put_thr;
     int put_port, get_port;
     
-    put_port = DEFAULT_PUT_PORT;
+    put_port = cache_port;
     get_port = DEFAULT_GET_PORT;
     printf ("Put Port %d, Get Port %d\n", put_port, get_port);
 

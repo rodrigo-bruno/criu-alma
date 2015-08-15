@@ -41,12 +41,12 @@ extern int is_remote_image(int fd);
 
 /* Starts an image proxy daemon (dump side). It receives image files through 
  * socket connections and forwards them to the image cache (restore side). */
-extern int image_proxy(char* cache_host);
+extern int image_proxy(char* cache_host, unsigned short cache_port);
 
 /* Starts an image cache daemon (restore side). It receives image files through
  * socket connections and caches them until they are requested by the restore
  * process. */
-extern int image_cache();
+extern int image_cache(unsigned short cache_port);
 
 
 #endif	/* IMAGE_REMOTE_H */

@@ -22,6 +22,7 @@
 #include "protobuf/pagemap.pb-c.h"
 #include "image-desc.h"
 
+// TODO - turn printfs on pr_pinfos
 // TODO - share defines in a single header.
 #define DEFAULT_LISTEN 50
 #define PATHLEN 32
@@ -56,9 +57,9 @@ typedef struct rimg {
 static remote_image *head = NULL;
 static int sockfd = -1;
 static sem_t semph;
-static int server_port = DEFAULT_PUT_PORT;
+static unsigned short server_port = DEFAULT_PUT_PORT;
 static char* dst_host;
-static int dst_port = DEFAULT_PUT_PORT;
+static unsigned short dst_port = DEFAULT_PUT_PORT;
 
 #if GC_COMPRESSION
 
@@ -69,14 +70,24 @@ typedef struct rpagemap {
     struct rpagemap *next, *prev;
 } remote_pagemap;
 
+typedef struct rgarbage {
+    uint64_t vaddr;
+    uint32_t nr_pages;
+    struct rgarbage *next, *prev;
+} remote_garbage;
+
 typedef struct rmem {
     char path[PATHLEN];
     remote_image *pages, *pagemap;
     PagemapHead* pheader;
     remote_pagemap* pagemap_list;
-    u32 pagemap_magic;
+    remote_garbage* garbage_list;
+    
+    u32 pagemap_magic_a;
+    u32 pagemap_magic_b;
     struct rmem *next, *prev;
     sem_t pages_cached;
+    sem_t garbage_cached;
 } remote_mem;
 
 static pthread_mutex_t pages_lock;
@@ -101,13 +112,14 @@ int pb_unpack_object(int fd, int eof, int type, void** pobj) {
         u8 local[PB_PKOBJ_LOCAL_SIZE];
 	void *buf = (void *)&local;
         int ret;
+        int nbytes = 0;
         u32 size;
         
         // Read object size
 	ret = read(fd, &size, sizeof(size));
 	if (ret == 0) {
                 if(eof) {
-                    return 0;
+                    return ret;
                 } else {
                         pr_err("Unexpected EOF.\n");
                         return -1;
@@ -121,6 +133,7 @@ int pb_unpack_object(int fd, int eof, int type, void** pobj) {
                         size);
 		return -1;
 	}
+        nbytes = ret;
 
         // Read object
 	ret = read(fd, buf, size);
@@ -131,6 +144,7 @@ int pb_unpack_object(int fd, int eof, int type, void** pobj) {
 		pr_perror("Read %d bytes while %d expected.", ret, size);
 		return -1;
 	}
+        nbytes += ret;
 
 	*pobj = cr_pb_descs[type].unpack(NULL, size, buf);
 	if (!*pobj) {
@@ -138,15 +152,15 @@ int pb_unpack_object(int fd, int eof, int type, void** pobj) {
 		return -1;
 	}
         
-        return 0;
+        return nbytes;
 }
 
-int pb_pack_object(
-    remote_image* rimg, int type, void* obj) {
+int pb_pack_object(int fd, int type, void* obj) {
         u8 local[PB_PKOBJ_LOCAL_SIZE];
         void *buf = (void *)&local;
         u32 size, packed;
         int ret = -1;
+        int nbytes = 0;
 
         size = cr_pb_descs[type].getpksize(obj);
         if (size > PB_PKOBJ_LOCAL_SIZE) {
@@ -160,121 +174,291 @@ int pb_pack_object(
                 pr_err("Failed packing PB object %p\n", obj);
                 return -1;
         }
-        ret = write(rimg->dst_fd, &size, sizeof(size));
+        ret = write(fd, &size, sizeof(size));
         if(ret != sizeof(size)) {
 		pr_perror("Could not write %zu bytes (obj size)", sizeof(size));
 		return -1;
         }
+        nbytes = ret;
         
-        ret = write(rimg->dst_fd, buf, size);
+        ret = write(fd, buf, size);
         if (ret != size) {
 		pr_perror("Could not write %u bytes (obj)", size);
 		return -1;
         }
+        nbytes += ret;
         
-        return 0;
+        return nbytes;
 }
 
 // NOTE: I assume the double magic way (check image.c img_check_magic).
-int rimg_check_magic(int fd, int type) {
-    u32 magic;
-    
-    if (read(fd, &magic, sizeof(magic)) < 0) {
+int rimg_read_magic(int fd, remote_mem* rmem) {
+    if (read(fd, &(rmem->pagemap_magic_a), sizeof(u32)) != sizeof(u32)) {
+        pr_err("Could not read magic\n");
 	return -1;
     }
-    if (read(fd, &magic, sizeof(magic)) < 0) {
+    if (read(fd, &(rmem->pagemap_magic_b), sizeof(u32)) != sizeof(u32)) {
+        pr_err("Could not read magic\n");
 	return -1;
     }
-    
-    	if (magic != imgset_template[type].magic) {
-            pr_err("Magic doesn't match\n");
-            return -1;
-	}
 
-    return magic;
+    return 1;
 }
-
-int rimg_write_magic(u32 magic, remote_image* rimg) {
-    if(write(rimg->dst_fd, &magic, sizeof(magic)) != sizeof(magic)) {
-        pr_err("Could not write magic for %s\n", rimg->path);
+// NOTE: I assume the double magic way (check image.c img_check_magic).
+int rimg_write_magic(int fd, remote_mem* rmem) {
+    if(write(fd, &(rmem->pagemap_magic_a), sizeof(u32)) != sizeof(u32)) {
+        pr_err("Could not write magic.\n");
         return -1;
     }
-    return magic;
+    if(write(fd, &(rmem->pagemap_magic_b), sizeof(u32)) != sizeof(u32)) {
+        pr_err("Could not write magic.\n");
+        return -1;
+    }
+    return 1;
 }
 
 int unpack_pagemap(remote_image* rimg, remote_mem* rmem)
 {
 	int ret;
         void* pobj = NULL;
+        int nbytes = 0;
                
-        rmem->pagemap_magic = rimg_check_magic(rimg->src_fd, CR_FD_PAGEMAP);
-        if(rmem->pagemap_magic == -1) {
+        if(rimg_read_magic(rimg->src_fd, rmem) == -1) {
             pr_err("Magic could not be verified for %s\n", rimg->path);
             return -1;
         }
 
         ret = pb_unpack_object(rimg->src_fd, 0, PB_PAGEMAP_HEAD, &pobj);
-        if (ret == -1) {
+        if (ret < 0) {
             pr_perror("Error unpacking header from %s.", rimg->path);
             return -1;
         }
+        nbytes = ret;
         rmem->pheader = (PagemapHead*) pobj;
-        sprintf(rmem->path, "pages-%d", rmem->pheader->pages_id);
-        // DEBUG
-        printf("PagemapHead pages_id -> %d\n", rmem->pheader->pages_id);
+        sprintf(rmem->path, "pages-%d.img", rmem->pheader->pages_id);
 
         while (1) {
                ret = pb_unpack_object(rimg->src_fd, 1, PB_PAGEMAP, &pobj);
-                if (ret == -1) {
+                if (ret < 0) {
                     pr_perror("Error unpacking header from %s.", rimg->path);
                     return -1;
                 } else if (ret == 0) {
+                    printf("Finished unpacking %s.\n", rimg->path);
+                    close(rimg->src_fd);
                     break;
                 }
-               remote_pagemap* rpagemap = malloc(sizeof(remote_pagemap));
-               if (!rpagemap) {
-                   pr_perror("Cannot allocate memory for remote_pagemap");
+                nbytes += ret;
+                remote_pagemap* rpagemap = malloc(sizeof(remote_pagemap));
+                if (!rpagemap) {
+                    pr_perror("Cannot allocate memory for remote_pagemap");
                     return -1;
-               }
-               rpagemap->pentry = (PagemapEntry*) pobj;
-               // DEBUG
-               printf("pagemap entry -> pages = %u, vaddr = %p\n", rpagemap->pentry->nr_pages, decode_pointer(rpagemap->pentry->vaddr));
+                }
+                rpagemap->pentry = (PagemapEntry*) pobj;
+                // DEBUG
+                printf("pagemap entry -> pages = %u, vaddr = %p\n", rpagemap->pentry->nr_pages, decode_pointer(rpagemap->pentry->vaddr));
                 DL_APPEND(rmem->pagemap_list, rpagemap);
         }
-	return 1;
+	return nbytes;
 }
 
 int pack_pagemap(remote_image* rimg, remote_mem* rmem) 
 {
     	int ret;
         remote_pagemap* rpmap = NULL;
+        int nbytes = 0;
                
-        ret = rimg_write_magic(rmem->pagemap_magic, rimg);
-        if(ret == -1) {
+        if(rimg_write_magic(rimg->dst_fd, rmem) < 0) {
                 pr_err("Could not write magic for %s\n", rmem->path);
                 return -1;
         }
 
-        ret = pb_pack_object(rimg, PB_PAGEMAP_HEAD, rmem->pheader);
-        if(!ret) {
+        ret = pb_pack_object(rimg->dst_fd, PB_PAGEMAP_HEAD, rmem->pheader);
+        if(ret < 0) {
                 pr_perror("Error packing header from %s.", rmem->path);
                 return -1;
         }
-
-        for(rpmap = rmem->pagemap_list; rpmap != NULL; rpmap =   rpmap->next) {
-                ret = pb_pack_object(rimg, PB_PAGEMAP, rpmap->pentry);
-                if(!ret) {
+        nbytes = ret;
+        
+        for(rpmap = rmem->pagemap_list; rpmap != NULL; rpmap = rpmap->next) {
+                ret = pb_pack_object(rimg->dst_fd, PB_PAGEMAP, rpmap->pentry);
+                if(ret < 0) {
                         pr_perror("Error packing pagemap from %s.", rmem->path);
                         return -1;
-                }            
+                }
+                nbytes += ret;
         }
-        return 1;
+        close(rimg->dst_fd);
+        return nbytes;
 }
 
-void compress_garbage(remote_mem* rmem) {
-    // TODO - iterate through pagemap and whenever a mapping (or part of it) is
-    // garbage, clean it, removing the corresponding page from pages 
-    // remote_image).
+// NOTE: I am assuming that the garbage list is received in order.
+int recv_garbage_list(int fd, remote_mem* rmem) {
+    int n = 0;
+    uint64_t vaddr;
+    uint32_t nr_pages;
+    remote_garbage* rgarbage = NULL;
+    
+    while(1) {
+        n = read(fd, &vaddr, sizeof(vaddr));
+        if(!n) {
+            printf("Finished receiving garbage list.\n");
+            close(fd);
+            break;
+        }
+        else if(n != sizeof(vaddr)) {
+            pr_perror("Could not read vaddr from socket (garbage list)");
+            return -1;
+        }
+        
+        n = read(fd, &nr_pages, sizeof(nr_pages));
+        if(n != sizeof(nr_pages)) {
+            pr_perror("Could not read # pages from socket (garbage list)");
+            return -1;
+        }
+        
+        rgarbage = malloc(sizeof(remote_garbage));
+        if(!rgarbage) {
+            pr_perror("Could not allocate remote garbage structure");
+            return -1;
+        }
+        rgarbage->vaddr = vaddr;
+        rgarbage->nr_pages = nr_pages;
+        DL_APPEND(rmem->garbage_list, rgarbage);
+    }
+    return 1;
+}
+
+int clean_pages(remote_buffer* rhead, remote_buffer** rpage, 
+                uint64_t curr, uint64_t from, uint64_t to) {
+    remote_buffer* aux = NULL;
+    uint64_t i;
+    
+    // Advance to from position
+    for(i = (from - curr) / PAGESIZE; i > 0; i--) {
+        *rpage = (*rpage)->next;
+        if(*rpage == NULL) {
+            pr_perror("Pages ended while advancing...");
+            return -1;
+        }
+    }
+    
+    // Start deleting garbage pages
+    for(i = (to - from) / PAGESIZE; i > 0; i--) {
+        aux = (*rpage)->next;
+        DL_DELETE(rhead, *rpage);
+        *rpage = aux;
+        if(*rpage == NULL && i > 1) {
+            pr_perror("Pages ended while deleting...");
+            return -1;
+        }
+    }
+    return 1;
+}
+
+remote_pagemap* alloc_pagemap() {
+    remote_pagemap* new_pm = NULL;
+    PagemapEntry* new_pe = NULL;
+    
+    new_pm = malloc(sizeof(remote_pagemap));
+    if(!new_pm) {
+        pr_perror("Could not allocate remote_pagemap structure");
+        return NULL;
+    }
+    
+    new_pe = malloc(sizeof(PagemapEntry));
+    if(!new_pe) {
+        pr_perror("Could not allocate PagemapEntry structure");
+        return NULL;
+    }
+    new_pm->pentry = new_pe;
+    return new_pm;
+}
+
+int compress_garbage(remote_mem* rmem) {
+    remote_garbage* rgarbage = rmem->garbage_list;
+    remote_pagemap* rpagemap = rmem->pagemap_list;
+    remote_buffer* rpage = rmem->pages->buf_head;
+    remote_buffer* rpage_head = rmem->pages->buf_head;
+    uint32_t counter;
+    uint64_t gstart, gend, pstart, pend;
+
+    while(rgarbage != NULL) {
+        gstart = rgarbage->vaddr;
+        gend = gstart + rgarbage->nr_pages * PAGESIZE;
+        
+        // Advance until we hit the first garbage pages
+        pstart = rpagemap->pentry->vaddr;
+        pend = pstart + rpagemap->pentry->nr_pages * PAGESIZE;
+        while(pend <= gstart) { 
+            for(counter = 0; counter < rpagemap->pentry->nr_pages; counter++) {
+                rpage = rpage->next;
+                if(rpage == NULL) {
+                    pr_perror("Page list ended while advancing page maps");
+                    return -1;
+                }
+            }
+            rpagemap = rpagemap->next;
+            if(!rpagemap) {
+                pr_perror("Page mappings ended before all garbage is processed (%s)"
+                          , rmem->path);
+            }
+            
+            pstart = rpagemap->pentry->vaddr;
+            pend = pstart + rpagemap->pentry->nr_pages * PAGESIZE;
+        }
+                
+        // Case 1
+        if(pstart <= gstart && pend >= gend) {
+            remote_pagemap* new = alloc_pagemap();
+            rpagemap->pentry->nr_pages = (gstart - pstart) / PAGESIZE; 
+            new->pentry->vaddr = gend;
+            new->pentry->nr_pages = (pend - gend) / PAGESIZE;
+            if(rpagemap->next == NULL) {
+                DL_APPEND(rmem->pagemap_list, new);
+            }
+            else {
+                DL_PREPEND_ELEM(rmem->pagemap_list, rpagemap, new);
+            }
+            if(clean_pages(rpage_head, &rpage, pstart, gstart, gend) == -1) {
+                pr_perror("Could not clean pages in case 1 (%s)", rmem->path);
+                return -1;
+            }
+        }
+        // Case 2
+        else if(pstart >= gstart && pend <= gend) {
+            DL_DELETE(rmem->pagemap_list, rpagemap);
+            if(clean_pages(rpage_head, &rpage, pstart, pstart, pend) == -1) {
+                pr_perror("Could not clean pages in case 2 (%s)", rmem->path);
+                return -1;
+            }
+        }
+        // Case 3
+        else if(pstart <= gstart && pend > gstart && pend <= gend) { 
+            rpagemap->pentry->nr_pages = (gstart - pstart) / PAGESIZE;
+            if(clean_pages(rpage_head, &rpage, pstart, gstart, pend) == -1) {
+                pr_perror("Could not clean pages in case 3 (%s)", rmem->path);
+                return -1;
+            }            
+        }
+        // Case 4
+        else if(pstart > gstart && pstart <= gend && pend >= gend) {
+            rpagemap->pentry->vaddr = gend;
+            if(clean_pages(rpage_head, &rpage, pstart, pstart, gend) == -1) {
+                pr_perror("Could not clean pages in case 4 (%s)", rmem->path);
+                return -1;
+            }
+        }
+        // Unexpected case
+        else {
+            // TODO - report error, unexpected scenario. Print all addresses.
+            pr_perror("Unexpected scenario for %s", rmem->path);
+            return -1;
+        }
+
+        rgarbage = rgarbage->next;
+    }
+    
+    return 1;
 }
 
 // Get existing rmem or create one and return it.
@@ -293,10 +477,20 @@ remote_mem* get_rmem_for(char* path) {
         }
         else {
             result->pagemap_list = NULL;
+            result->garbage_list = NULL;
+            strncpy(result->path, path, PATHLEN);
             if (sem_init(&(result->pages_cached), 0, 0) != 0) {
-                fprintf(stderr, "Remote image connection semaphore init failed\n");
+                fprintf(stderr, "Pages cached semaphore init failed\n");
+                pthread_mutex_unlock(&pages_lock);
                 return NULL;  
             }
+            if (sem_init(&(result->garbage_cached), 0, 0) != 0) {
+                fprintf(stderr, "Gargabe cached semaphore init failed\n");
+                pthread_mutex_unlock(&pages_lock);
+                return NULL;  
+            }
+            // DEBUG
+            printf("Appending remote_mem for %s\n", rmem_head->path);
             DL_APPEND(rmem_head, result);
         }
     }
@@ -388,16 +582,53 @@ void* buffer_remote_image(void* ptr) {
         remote_mem *rmem1, rmem2;
         if (unpack_pagemap(rimg, &rmem2) == -1) {
             pr_perror("Error unpacking pagemap %s", rimg->path);
+            return NULL;
         }
+        // DEBUG
+        printf("pagemap %s unpacked\n", rimg->path);
         rmem1 = get_rmem_for(rmem2.path);
         rmem1->pagemap = rimg;
         rmem1->pagemap_list = rmem2.pagemap_list;
         rmem1->pheader = rmem2.pheader;
+        rmem1->pagemap_magic_a = rmem2.pagemap_magic_a;
+        rmem1->pagemap_magic_b = rmem2.pagemap_magic_b;
+        
+        
         sem_wait(&(rmem1->pages_cached));
-        compress_garbage(rmem1); // TODO - check for errors
-        pack_pagemap(rimg, rmem1); // TODO - check for error
+        
+        /*
+        sem_wait(&(rmem1->garbage_cached));
+        printf("compressing %s...\n", rmem1->path);
+        if( compress_garbage(rmem1) == -1) {
+            printf("Compress garbage for %s failed.", rmem1->path);
+            return NULL;
+        }
+        printf("compressing %s done\n", rmem1->path);
+        */
+        if(pack_pagemap(rimg, rmem1) == -1) {
+            pr_perror("Error packing pagemap %s", rimg->path);
+            return NULL;
+        }
+        printf("packing %s done\n", rimg->path);
         // TODO - free memory
         send_remote_image(rmem1->pages);
+        printf("sending %s done\n", rmem1->path);
+        return NULL;
+    }
+    else if(!strncmp(rimg->path, "garbage-", 8)) {
+        remote_mem* rmem = NULL;
+        char path[PATHLEN];
+        int pid;
+        
+        // We do not need to send this file to the cache.
+        close(rimg->dst_fd);
+        
+        sscanf(rimg->path, "garbage-%d", &pid);
+        sprintf(path, "pages-%d", pid);
+        rmem = get_rmem_for(path);
+        
+        recv_garbage_list(rimg->src_fd, rmem);
+        sem_post(&(rmem->garbage_cached));
         return NULL;
     }
 #endif
@@ -503,13 +734,14 @@ void* accept_remote_image_connections(void* null) {
     }
 }
 
-int image_proxy(char* cache_host) {
+int image_proxy(char* cache_host, unsigned short cache_port) {
     int sockopt = 1;
     struct sockaddr_in serv_addr;
     pthread_t sock_thr;
     
     dst_host = cache_host;
-    printf ("Local Port %d, Remote Host %s:%d\n", server_port, dst_host, dst_port);
+    dst_port = cache_port;
+    printf ("Local Port %d, Remote Host %s:%hu\n", server_port, dst_host, dst_port);
     
     if (sem_init(&semph, 0, 0) != 0) {
         fprintf(stderr, "Remote image connection semaphore init failed\n");

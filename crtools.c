@@ -63,6 +63,7 @@ void init_opts(void)
 	opts.ps_socket = -1;
         // <underscore>
         opts.addr = "localhost";
+        opts.ps_port = 9995;  // cache put port
         // </underscore>
 }
 
@@ -391,7 +392,9 @@ int main(int argc, char *argv[], char *envp[])
 			opts.addr = optarg;
 			break;
 		case 1052:
-			opts.ps_port = htons(atoi(optarg));
+			// <underscore> - FIXME - htons
+                        // opts.ps_port = htons(atoi(optarg));
+                        opts.ps_port = atoi(optarg);
 			if (!opts.ps_port)
 				goto bad_arg;
 			break;
@@ -625,11 +628,11 @@ int main(int argc, char *argv[], char *envp[])
         // <underscore>
         if (!strcmp(argv[optind], "image-cache"))
                 // TODO - make image_proxy support other server options
-		return image_cache();
+		return image_cache(opts.ps_port);
         
         if (!strcmp(argv[optind], "image-proxy"))
                 // TODO - make image_proxy support other server options
-		return image_proxy(opts.addr);
+		return image_proxy(opts.addr, opts.ps_port);
         // </underscore>
 
 	if (!strcmp(argv[optind], "service"))
