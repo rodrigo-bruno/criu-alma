@@ -9,42 +9,13 @@
 #include <netdb.h>
 #include <sys/stat.h> 
 #include <fcntl.h>
-#include <pthread.h>
 #include <semaphore.h>
 #include <utlist.h>
 #include <time.h>
 
 #include "image-remote.h"
+#include "image-remote-pvt.h"
 #include "criu-log.h"
-
-#define DEFAULT_LISTEN 50
-#define PATHLEN 32
-#define DUMP_FINISH "DUMP_FINISH"
-#define PAGESIZE 4096
-#define BUF_SIZE PAGESIZE
-// TODO - this may be problematic because of double evaluation...
-#define MIN(x, y) (((x) < (y)) ? (x) : (y))
-
-typedef struct rbuf {
-    char buffer[BUF_SIZE];
-    int nbytes; // How many bytes are in the buffer.
-    struct rbuf *next, *prev;
-} remote_buffer;
-
-typedef struct rimg {
-    char path[PATHLEN];
-    int src_fd;
-    int dst_fd;
-    struct rimg *next, *prev;
-    pthread_t putter, getter;
-    remote_buffer* buf_head;
-    
-} remote_image;
-
-// TODO - fixme!
-int path_cmp2(remote_image *a, remote_image *b) {
-    return strcmp(a->path, b->path);
-}
 
 static remote_image *head = NULL;
 static int get_fd = -1;
@@ -53,6 +24,10 @@ static int finished = 0;
 static pthread_mutex_t lock;
 static sem_t semph;
 static int putting = 0;
+
+int path_cmp_rimg(remote_image *a, remote_image *b) {
+    return strcmp(a->path, b->path);
+}
 
 void* get_remote_image(void* ptr) {
     remote_image* rimg = (remote_image*) ptr;
@@ -143,7 +118,7 @@ remote_image* wait_for_image(int cli_fd, const char* path) {
     strncpy(like.path, path, PATHLEN);
     while (1) {
         pthread_mutex_lock(&lock);
-        DL_SEARCH(head, result, &like, path_cmp2);
+        DL_SEARCH(head, result, &like, path_cmp_rimg);
         pthread_mutex_unlock(&lock);
         if (result != NULL) {
             if (write(cli_fd, path, PATHLEN) < 1) {

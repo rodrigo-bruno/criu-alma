@@ -9,49 +9,24 @@
 #include <netdb.h>
 #include <sys/stat.h> 
 #include <fcntl.h>
-#include <pthread.h>
 #include <semaphore.h>
 #include <utlist.h>
 
 #include <google/protobuf-c/protobuf-c.h>
 
 #include "image-remote.h"
+#include "image-remote-pvt.h"
 #include "criu-log.h"
 #include "asm/types.h"
 #include "protobuf.h"
 #include "protobuf/pagemap.pb-c.h"
 #include "image-desc.h"
 
-// TODO - share defines in a single header.
-#define DEFAULT_LISTEN 50
-#define PATHLEN 32
-#define DUMP_FINISH "DUMP_FINISH"
-#define PAGESIZE 4096
-#define BUF_SIZE PAGESIZE
-// TODO - this may be problematic because of double evaluation...
-#define MIN(x, y) (((x) < (y)) ? (x) : (y))
-
 // GC compression means that we avoid transferring garbage data.
 #define GC_COMPRESSION 1
 
 // TODO - use CRIU's list implementation
 // TODO - check when both proxy and cache daemons die.
-
-typedef struct rbuf {
-    char buffer[BUF_SIZE];
-    int nbytes; // How many bytes are in the buffer.
-    struct rbuf *next, *prev;
-} remote_buffer;
-
-typedef struct rimg {
-    char path[PATHLEN];
-    int src_fd;
-    int dst_fd;
-    struct rimg *next, *prev;
-    pthread_t worker;
-    remote_buffer* buf_head;
-    
-} remote_image;
 
 static remote_image *head = NULL;
 static int sockfd = -1;
@@ -706,7 +681,7 @@ void* accept_remote_image_connections(void* null) {
         buf->nbytes = 0;
         DL_APPEND(img->buf_head, buf);
         
-        if (pthread_create( &img->worker, 
+        if (pthread_create( &img->putter, 
                             NULL, 
                             buffer_remote_image, 
                             (void*) img)) {
@@ -783,7 +758,7 @@ int image_proxy(char* cache_host, unsigned short cache_port) {
     
     remote_image *elt, *tmp;
     DL_FOREACH_SAFE(head,elt,tmp) {
-        pthread_join(elt->worker, NULL);
+        pthread_join(elt->putter, NULL);
         DL_DELETE(head,elt);
     }
     
