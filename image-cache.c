@@ -35,89 +35,28 @@ static remote_image* get_rimg_by_path(const char* path) {
     return NULL;
 }
 
-// TODO - simply call send_remote_image
 void* get_remote_image(void* ptr) {
     remote_image* rimg = (remote_image*) ptr;
-    remote_buffer* curr_buf = list_entry(rimg->buf_head.next, remote_buffer, l);
-    int n, curr_offset, nblocks;
-    int dst_fd = rimg->dst_fd;
-    
-    nblocks = 1; // This is for debug only
-    curr_offset = 0;
-    while(1) {
-        n = write(
-                    dst_fd, 
-                    curr_buf->buffer + curr_offset, 
-                    MIN(BUF_SIZE, curr_buf->nbytes) - curr_offset);
-        if(n > -1) {
-            curr_offset += n;
-            if(curr_offset == BUF_SIZE) {
-                curr_buf = list_entry(curr_buf->l.next, remote_buffer, l);
-                nblocks++;
-                curr_offset = 0;
-            }
-            else if(curr_offset == curr_buf->nbytes) {
-                pr_info("Finished forwarding %s (%d blocks, %d bytes on last block)\n", rimg->path, nblocks, curr_offset);
-                close(dst_fd);
-                return NULL;
-            }
-        }
-        else {
-             pr_perror("Write on %s socket failed (ret = %d)", rimg->path, n);
-             return NULL;
-        }
-    }
+    send_remote_image(rimg->dst_fd, rimg->path, &rimg->buf_head);
+    return NULL;
 }
 
-// TODO - increase putting, call, add tail and decrease putting, sempost
+
 void* put_remote_image(void* ptr) {
     remote_image* rimg = (remote_image*) ptr;
-    remote_buffer* curr_buf = list_entry(rimg->buf_head.next, remote_buffer, l);
-    int src_fd = rimg->src_fd;
-    int n, nblocks;
-    time_t t;
     
     pthread_mutex_lock(&lock);
     putting++;
+    pthread_mutex_unlock(&lock);    
+    
+    recv_remote_image(rimg->src_fd, rimg->path, &rimg->buf_head);
+    
+    pthread_mutex_lock(&lock);
+    list_add_tail(&(rimg->l), &rimg_head);
+    putting--;
     pthread_mutex_unlock(&lock);
-    
-    nblocks = 1;
-    while(1) {
-        n = read(   src_fd, 
-                    curr_buf->buffer + curr_buf->nbytes, 
-                    BUF_SIZE - curr_buf->nbytes);
-        if (n == 0) {
-            time(&t);
-            // TODO - remove timestamp
-            pr_info("Finished receiving %s (%d blocks) %s", rimg->path, nblocks, ctime(&t));
-            close(src_fd);
-            pthread_mutex_lock(&lock);
-            list_add_tail(&(rimg->l), &rimg_head);
-            putting--;
-            pthread_mutex_unlock(&lock);
-            sem_post(&semph);
-            return NULL;
-        }
-        else if (n > 0) {
-            curr_buf->nbytes += n;
-            if(curr_buf->nbytes == BUF_SIZE) {
-                remote_buffer* buf = malloc(sizeof (remote_buffer));
-                if(buf == NULL) {
-                    pr_perror("Unable to allocate remote_buffer structures");
-                }
-                buf->nbytes = 0;
-                list_add_tail(&(buf->l), &(rimg->buf_head));
-                curr_buf = buf;
-                nblocks++;
-            }
-            
-        }
-        else {
-            pr_perror("Read on %s socket failed", rimg->path);
-            return NULL;
-        }
-    }
-    
+    sem_post(&semph);
+    return NULL;
 }
 
 remote_image* wait_for_image(int cli_fd, const char* path) {

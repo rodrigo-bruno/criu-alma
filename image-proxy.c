@@ -64,9 +64,6 @@ typedef struct rmem {
 static pthread_mutex_t pages_lock;
 static LIST_HEAD(rmem_head);
 
-int recv_remote_image(remote_image* rimg);
-int send_remote_image(remote_image* rimg);
-
 static remote_mem* get_rimg_by_path(char* path) {
     remote_mem* rmem = NULL;
     list_for_each_entry(rmem, &rmem_head, l) {
@@ -476,71 +473,6 @@ remote_mem* get_rmem_for(char* path) {
 
 #endif
 
-int recv_remote_image(remote_image* rimg) {
-    int n;
-    int src_fd = rimg->src_fd;
-    remote_buffer* curr_buf = list_entry(rimg->buf_head.next, remote_buffer, l);
-    
-    while(1) {
-        n = read(   src_fd, 
-                    curr_buf->buffer + curr_buf->nbytes, 
-                    BUF_SIZE - curr_buf->nbytes);
-        if (n == 0) {
-            close(src_fd);
-            pr_info("Finished receiving %s.\n", rimg->path);
-            break;
-        }
-        else if (n > 0) {
-            curr_buf->nbytes += n;
-            if(curr_buf->nbytes == BUF_SIZE) {
-                remote_buffer* buf = malloc(sizeof (remote_buffer));
-                if(buf == NULL) {
-                    pr_perror("Unable to allocate remote_buffer structures");
-                    return -1;
-                }
-                buf->nbytes = 0;
-                list_add_tail(&(buf->l), &(rimg->buf_head));
-                curr_buf = buf;
-            }
-            
-        }
-        else {
-            pr_perror("Read on %s socket failed", rimg->path);
-            return -1;
-        }
-    }
-    return 0;
-}
-
-int send_remote_image(remote_image* rimg) {
-    int dst_fd = rimg->dst_fd;
-    remote_buffer* curr_buf = list_entry(rimg->buf_head.next, remote_buffer, l);
-    int n, curr_offset = 0;
-    
-    while(1) {
-        n = write(
-                    dst_fd, 
-                    curr_buf->buffer + curr_offset, 
-                    MIN(BUF_SIZE, curr_buf->nbytes) - curr_offset);
-        if(n > -1) {
-            curr_offset += n;
-            if(curr_offset == BUF_SIZE) {
-                curr_buf = list_entry(curr_buf->l.next, remote_buffer, l);
-                curr_offset = 0;
-            }
-            else if(curr_offset == curr_buf->nbytes) {
-                pr_info("Finished forwarding %s.\n", rimg->path);
-                close(dst_fd);
-                break;
-            }
-        }
-        else {
-             pr_perror("Write on %s socket failed (n=%d)", rimg->path, n);
-        }
-    }
-    return 0;
-}
-
 void* buffer_remote_image(void* ptr) {
     remote_image* rimg = (remote_image*) ptr;
 
@@ -548,7 +480,7 @@ void* buffer_remote_image(void* ptr) {
     if(!strncmp(rimg->path, "pages-", 6)) {
         remote_mem* rmem = get_rmem_for(rimg->path);
         rmem->pages = rimg;
-        if (recv_remote_image(rimg)) {
+        if (recv_remote_image(rimg->src_fd, rimg->path, &(rimg->buf_head)) < 0) {
             return NULL;
         }
         sem_post(rmem->pages_cached);
@@ -586,7 +518,7 @@ void* buffer_remote_image(void* ptr) {
         }
         
         // TODO - free memory
-        send_remote_image(rmem1->pages);
+        send_remote_image(rmem1->pages->dst_fd, rmem1->pages->path, &(rmem1->pages->buf_head));
         return NULL;
     }
     else if(!strncmp(rimg->path, "garbage-", 8)) {
@@ -607,10 +539,10 @@ void* buffer_remote_image(void* ptr) {
     }
 #endif
     
-    if (recv_remote_image(rimg)) {
+    if (recv_remote_image(rimg->src_fd, rimg->path, &(rimg->buf_head)) < 0) {
         return NULL;
     }
-    send_remote_image(rimg);
+    send_remote_image(rimg->dst_fd, rimg->path, &(rimg->buf_head));
     return NULL;
 }
 

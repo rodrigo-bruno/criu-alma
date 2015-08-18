@@ -33,5 +33,8 @@ typedef struct rimg {
     
 } remote_image;
 
+int send_remote_image(int fd, char* path, struct list_head* rbuff_head);
+int recv_remote_image(int fd, char* path, struct list_head* rbuff_head);
+
 #endif	/* IMAGE_REMOTE_INTERNAL_H */
 
