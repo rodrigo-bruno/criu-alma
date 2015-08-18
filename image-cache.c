@@ -10,14 +10,14 @@
 #include <sys/stat.h> 
 #include <fcntl.h>
 #include <semaphore.h>
-#include <utlist.h>
 #include <time.h>
 
 #include "image-remote.h"
 #include "image-remote-pvt.h"
 #include "criu-log.h"
 
-static remote_image *head = NULL;
+
+static LIST_HEAD(rimg_head);
 static int get_fd = -1;
 static int put_fd = -1;
 static int finished = 0;
@@ -25,13 +25,20 @@ static pthread_mutex_t lock;
 static sem_t semph;
 static int putting = 0;
 
-int path_cmp_rimg(remote_image *a, remote_image *b) {
-    return strcmp(a->path, b->path);
+static remote_image* get_rimg_by_path(const char* path) {
+    remote_image* rimg = NULL;
+    list_for_each_entry(rimg, &rimg_head, l) {
+        if(!strncmp(rimg->path, path, PATHLEN)) {
+            return rimg;
+        }
+    }
+    return NULL;
 }
 
+// TODO - simply call send_remote_image
 void* get_remote_image(void* ptr) {
     remote_image* rimg = (remote_image*) ptr;
-    remote_buffer* curr_buf = rimg->buf_head;
+    remote_buffer* curr_buf = list_entry(rimg->buf_head.next, remote_buffer, l);
     int n, curr_offset, nblocks;
     int dst_fd = rimg->dst_fd;
     
@@ -45,7 +52,7 @@ void* get_remote_image(void* ptr) {
         if(n > -1) {
             curr_offset += n;
             if(curr_offset == BUF_SIZE) {
-                curr_buf = curr_buf->next;
+                curr_buf = list_entry(curr_buf->l.next, remote_buffer, l);
                 nblocks++;
                 curr_offset = 0;
             }
@@ -62,9 +69,10 @@ void* get_remote_image(void* ptr) {
     }
 }
 
+// TODO - increase putting, call, add tail and decrease putting, sempost
 void* put_remote_image(void* ptr) {
     remote_image* rimg = (remote_image*) ptr;
-    remote_buffer* curr_buf = rimg->buf_head;
+    remote_buffer* curr_buf = list_entry(rimg->buf_head.next, remote_buffer, l);
     int src_fd = rimg->src_fd;
     int n, nblocks;
     time_t t;
@@ -81,10 +89,10 @@ void* put_remote_image(void* ptr) {
         if (n == 0) {
             time(&t);
             // TODO - remove timestamp
-            pr_info("Finished receiving %s (%d blocks, %d bytes on last block) %s\n", rimg->path, nblocks, rimg->buf_head->prev->nbytes, ctime(&t));
+            pr_info("Finished receiving %s (%d blocks) %s", rimg->path, nblocks, ctime(&t));
             close(src_fd);
             pthread_mutex_lock(&lock);
-            DL_APPEND(head, rimg);
+            list_add_tail(&(rimg->l), &rimg_head);
             putting--;
             pthread_mutex_unlock(&lock);
             sem_post(&semph);
@@ -98,7 +106,7 @@ void* put_remote_image(void* ptr) {
                     pr_perror("Unable to allocate remote_buffer structures");
                 }
                 buf->nbytes = 0;
-                DL_APPEND(rimg->buf_head, buf);
+                list_add_tail(&(buf->l), &(rimg->buf_head));
                 curr_buf = buf;
                 nblocks++;
             }
@@ -113,12 +121,11 @@ void* put_remote_image(void* ptr) {
 }
 
 remote_image* wait_for_image(int cli_fd, const char* path) {
-    remote_image *result, like;
+    remote_image *result;
     
-    strncpy(like.path, path, PATHLEN);
     while (1) {
         pthread_mutex_lock(&lock);
-        DL_SEARCH(head, result, &like, path_cmp_rimg);
+        result = get_rimg_by_path(path);
         pthread_mutex_unlock(&lock);
         if (result != NULL) {
             if (write(cli_fd, path, PATHLEN) < 1) {
@@ -216,8 +223,8 @@ void* accept_put_image_connections(void* null) {
             return NULL;
         }
         
-        remote_image* img = malloc(sizeof (remote_image));
-        if (img == NULL) {
+        remote_image* rimg = malloc(sizeof (remote_image));
+        if (rimg == NULL) {
             pr_perror("Unable to allocate remote_image structures");
             return NULL;
         }
@@ -228,22 +235,23 @@ void* accept_put_image_connections(void* null) {
             return NULL;
         }
         
-        strncpy(img->path, path_buf, PATHLEN);
-        img->src_fd = cli_fd;
-        img->dst_fd = -1;
-        img->buf_head = NULL;
+        strncpy(rimg->path, path_buf, PATHLEN);
+        rimg->src_fd = cli_fd;
+        rimg->dst_fd = -1;
+        INIT_LIST_HEAD(&(rimg->buf_head));
         buf->nbytes = 0;
-        DL_APPEND(img->buf_head, buf);
+        INIT_LIST_HEAD(&(rimg->buf_head));
+        list_add_tail(&(buf->l), &(rimg->buf_head));
         
-        if (pthread_create( &img->putter, 
+        if (pthread_create( &rimg->putter, 
                             NULL, 
                             put_remote_image, 
-                            (void*) img)) {
+                            (void*) rimg)) {
             pr_perror("Unable to create put thread");
             return NULL;
         } 
         time(&t);
-        pr_info("Reveiced PUT request for %s. %s\n", img->path, ctime(&t));
+        pr_info("Reveiced PUT request for %s. %s\n", rimg->path, ctime(&t));
     }
 }
 
@@ -323,12 +331,14 @@ int image_cache(unsigned short cache_port) {
     pthread_join(put_thr, NULL);
     pthread_join(get_thr, NULL);
     
-    remote_image *elt, *tmp;
-    DL_FOREACH_SAFE(head,elt,tmp) {
-        pthread_join(elt->putter, NULL);
-        pthread_join(elt->getter, NULL);
-        DL_DELETE(head,elt);
+    remote_image* rimg = NULL;
+    list_for_each_entry(rimg, &rimg_head, l) {
+        pthread_join(rimg->putter, NULL);
+        pthread_join(rimg->getter, NULL);
+        // TODO - delete from list?
     }
+    
+    // TODO - clean memory?
     
     return 0;
 }

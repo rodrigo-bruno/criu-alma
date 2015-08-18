@@ -2,6 +2,7 @@
 #define	IMAGE_REMOTE_INTERNAL_H
 
 #include <pthread.h>
+#include "list.h"
 
 #define DEFAULT_LISTEN 50
 #define PATHLEN 32
@@ -19,16 +20,16 @@
 typedef struct rbuf {
     char buffer[BUF_SIZE];
     int nbytes; // How many bytes are in the buffer.
-    struct rbuf *next, *prev;
+    struct list_head l;
 } remote_buffer;
 
 typedef struct rimg {
     char path[PATHLEN];
     int src_fd;
     int dst_fd;
-    struct rimg *next, *prev;
+    struct list_head l;
     pthread_t putter, getter;
-    remote_buffer* buf_head;
+    struct list_head buf_head;
     
 } remote_image;
 

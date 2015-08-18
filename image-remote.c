@@ -16,7 +16,7 @@
 #include <semaphore.h>
 
 #include "criu-log.h"
-#include "utlist.h"
+#include "list.h"
 
 #include "image-remote.h"
 
@@ -27,44 +27,37 @@
 typedef struct el {
     char path[PATHLEN];
     int sockfd;
-    struct el *next, *prev;
+    struct list_head l;
 } remote_image;
 
-int path_cmp(remote_image *a, remote_image *b) {
-    return strcmp(a->path, b->path);
-}
+static LIST_HEAD(rimg_head);
 
-int fd_cmp(remote_image *a, remote_image *b) {
-    return a->sockfd == b->sockfd;
+remote_image* get_rimg_by_fd(int fd) {
+    remote_image* rimg = NULL;
+    list_for_each_entry(rimg, &rimg_head, l) {
+        if(rimg->sockfd == fd) {
+            return rimg;
+        }
+    }
+    return NULL;
 }
-
-static remote_image *head = NULL;
 
 void check_remote_connections() {
     int error = 0;
     socklen_t len = sizeof (error);
-    remote_image *s;
+    remote_image *rimg;
 
-    for(s = head; s != NULL; s = s->next) {
+    list_for_each_entry(rimg, &rimg_head, l) {
         pr_info("Path = %s FD = %d State %d\n", 
-                s->path, 
-                s->sockfd,
-                getsockopt(s->sockfd, SOL_SOCKET, SO_ERROR, &error, &len));
+                rimg->path, 
+                rimg->sockfd,
+                getsockopt(rimg->sockfd, SOL_SOCKET, SO_ERROR, &error, &len));
     }
 }
 
 int is_remote_image(int fd) {
-    remote_image *result, like;
-
-    like.sockfd = fd;
-
-    DL_SEARCH(head, result, &like, fd_cmp);
-    
-    if (result != NULL) {
-        return 1;
-    }
-    
-    return 0;
+    remote_image *result = get_rimg_by_fd(fd);
+    return result != NULL ? 1 : 0;
 }
 
 int setup_local_client_connection(int port) {
@@ -132,7 +125,7 @@ int get_remote_image_connection(char* path) {
         }
         img->sockfd = sockfd;
         strncpy(img->path, path, PATHLEN);
-        DL_APPEND(head, img);
+        list_add_tail(&(img->l), &rimg_head);
         return sockfd;
     }
     else if(!strncmp(buf, DUMP_FINISH, PATHLEN)) {
