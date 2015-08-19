@@ -8,7 +8,6 @@ int recv_remote_image(int fd, char* path, struct list_head* rbuff_head)
 {
         remote_buffer* curr_buf = list_entry(rbuff_head->next, remote_buffer, l);
         int n, nblocks;
-        time_t t;
        
         nblocks = 1;
         while(1) {
@@ -16,9 +15,8 @@ int recv_remote_image(int fd, char* path, struct list_head* rbuff_head)
                          curr_buf->buffer + curr_buf->nbytes, 
                          BUF_SIZE - curr_buf->nbytes);
                 if (n == 0) {
-                        time(&t);
-                        pr_info("Finished receiving %s (%d blocks, %d bytes on last block) %s", 
-                                path, nblocks, curr_buf->nbytes, ctime(&t));
+                        pr_info("Finished receiving %s (%d blocks, %d bytes on last block)\n", 
+                                path, nblocks, curr_buf->nbytes);
                         close(fd);
                         return nblocks*BUF_SIZE + curr_buf->nbytes;
                 }

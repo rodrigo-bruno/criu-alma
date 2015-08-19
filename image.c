@@ -408,10 +408,6 @@ void do_check_remote_images() {
     check_remote_connections();
 }
 
-int do_is_remote_image(int fd) {
-    return is_remote_image(fd);
-}
-
 static int do_open_remote_image(struct cr_img *img, int type, unsigned long oflags, char *path)
 {
 	int ret, flags;
