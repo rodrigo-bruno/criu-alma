@@ -322,35 +322,6 @@ static int do_open_image(struct cr_img *img, int dfd, int type, unsigned long of
 	int ret, flags;
 
 	flags = oflags & ~(O_NOBUF | O_SERVICE);
-
-        /*
-         * TODO - option to change the default local port.
-         * NOTE: dump is WRONLY, restore is RDONLY
-         * NOTE: /usr/lib/locale/locale-archive had to be copied from poligrid...
-         * Path to success:
-         * PC 1:
-         * sudo criu restore -d -vvv -o restore.log  --remote && echo OK
-         * 
-         * PC 2:
-         * ssh -f rbruno@poligrid -L 9997:poligrid:9997 -N
-         * setsid ./test.sh  < /dev/null &> /tmp/test.log &
-         * ps -C test.sh
-         * sudo criu dump -t <pid> -vvv -o dump.log --remote && echo OK
-         * scp /tmp/test.log rbruno@polidrig:/tmp
-         * 
-         * Alg:
-         *  - <restore> starts and opens a server socket
-         *  - <restore> for each accept, save the fd into a hash table <path; fd>
-         *  - <restore> for each open file call, look for an already received 
-         * connection. If the connection isn't created already, wait until it
-         * succeeds.
-         *  - <restore> on successful restore, close all connections.
-         * 
-         * - <dump> (assume that the restore side is already created)
-         * - <dump> for every file open, create a new client socket connection
-         * - <dump> try to proceed as usual.
-         */
-        
                
 	ret = openat(dfd, path, flags, CR_FD_PERM);
         
@@ -402,10 +373,6 @@ err:
 // <underscore>
 int do_finish_remote_dump() {
     return finish_remote_dump();
-}
-
-void do_check_remote_images() {
-    check_remote_connections();
 }
 
 static int do_open_remote_image(struct cr_img *img, int type, unsigned long oflags, char *path)
@@ -538,13 +505,22 @@ int open_image_dir(char *dir)
 	ret = install_service_fd(IMG_FD_OFF, fd);
 	close(fd);
 	fd = ret;
+        
+        // <underscore> TODO - set current namespace
 
 	if (opts.img_parent) {
-		ret = symlinkat(opts.img_parent, fd, CR_PARENT_LINK);
-		if (ret < 0 && errno != EEXIST) {
-			pr_perror("Can't link parent snapshot");
-			goto err;
-		}
+                // <underscore> added if condition for remote operating
+                if(opts.remote) {
+                    // TODO - call image-remote set parent namespace
+                    // TODO - <parent> <namespace A> <namespace B> ...
+                }
+                else {
+                        ret = symlinkat(opts.img_parent, fd, CR_PARENT_LINK);
+                        if (ret < 0 && errno != EEXIST) {
+                                pr_perror("Can't link parent snapshot");
+                                goto err;
+                        }
+                }
 	}
 
 	return 0;

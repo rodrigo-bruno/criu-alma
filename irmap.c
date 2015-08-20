@@ -393,6 +393,7 @@ static int irmap_cache_one(IrmapCacheEntry *ie)
 	return 0;
 }
 
+// <underscore> TODO - I need to understand what these irmap caches are used for.
 static int open_irmap_cache(struct cr_img **img)
 {
 	int dir = AT_FDCWD;

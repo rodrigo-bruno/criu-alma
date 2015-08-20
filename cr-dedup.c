@@ -11,6 +11,7 @@
 
 static int cr_dedup_one_pagemap(int pid);
 
+// <underscore> I eventually need to patch this as also.
 int cr_dedup(void)
 {
 	int close_ret, ret = 0;

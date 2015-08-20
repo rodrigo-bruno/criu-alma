@@ -22,9 +22,11 @@
 #include "image-desc.h"
 
 // GC compression means that we avoid transferring garbage data.
-#define GC_COMPRESSION 1
+#define GC_COMPRESSION 0
 
 // TODO - check when both proxy and cache daemons die.
+// TODO - I need to have a port open for get images (for dedup purposes)
+// TODO - get code from cache into the shared source code.
 
 static LIST_HEAD(rimg_head);
 static int sockfd = -1;

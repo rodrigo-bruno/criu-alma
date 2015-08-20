@@ -43,20 +43,6 @@ remote_image* get_rimg_by_fd(int fd)
         return NULL;
 }
 
-// TODO - needed?
-void check_remote_connections() 
-{
-        int error = 0;
-        socklen_t len = sizeof (error);
-        remote_image *rimg;
-
-        list_for_each_entry(rimg, &rimg_head, l) {
-                pr_info("Path = %s FD = %d State %d\n", 
-                    rimg->path, rimg->sockfd, 
-                    getsockopt(rimg->sockfd, SOL_SOCKET, SO_ERROR, &error, &len));
-        }
-}
-
 int setup_local_client_connection(int port) 
 {
         int sockfd;
