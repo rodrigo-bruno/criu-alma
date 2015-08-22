@@ -68,7 +68,7 @@ int setup_local_client_connection(int port)
               server->h_length);
         serv_addr.sin_port = htons(port);
 
-        if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof (serv_addr)) < 0) {
+        if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
                 pr_perror("Unable to connect to remote restore host %s", DEFAULT_HOST);
                 return -1;
         }
@@ -81,7 +81,7 @@ int get_remote_image_connection(char* path)
         int sockfd, n;
         char buf[PATHLEN];
 
-        sockfd = setup_local_client_connection(DEFAULT_GET_PORT);
+        sockfd = setup_local_client_connection(CACHE_GET_PORT);
         if(sockfd < 0) {
                return -1;
         }
@@ -129,7 +129,7 @@ int open_remote_image_connection(char* path)
 {
         int sockfd;
 
-        sockfd = setup_local_client_connection(DEFAULT_PUT_PORT);
+        sockfd = setup_local_client_connection(PROXY_PUT_PORT);
         if(sockfd < 0) {
                 return -1;
         }

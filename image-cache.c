@@ -1,22 +1,41 @@
+#include <unistd.h>
+
 #include "image-remote.h"
 #include "image-remote-pvt.h"
 #include "criu-log.h"
 
-int image_cache(unsigned short cache_port) 
+void* cache_remote_image(void* ptr) 
+{
+        remote_image* rimg = (remote_image*) ptr;
+        
+        if (!strncmp(rimg->path, DUMP_FINISH, sizeof (DUMP_FINISH))) 
+        {
+                close(rimg->src_fd);
+                return NULL;
+        }
+    
+        prepare_put_rimg();
+    
+        recv_remote_image(rimg->src_fd, rimg->path, &rimg->buf_head);
+        
+        finalize_put_rimg(rimg);
+        
+        return NULL;
+}
+
+int image_cache(unsigned short cache_put_port) 
 {    
         pthread_t get_thr, put_thr;
         int put_fd, get_fd;
         
-        pr_info("Put Port %d, Get Port %d\n", cache_port, DEFAULT_GET_PORT);
+        pr_info("Put Port %d, Get Port %d\n", cache_put_port, CACHE_GET_PORT);
 
-        put_fd = prepare_server_socket(cache_port);
-        get_fd = prepare_server_socket(DEFAULT_GET_PORT);
+        put_fd = prepare_server_socket(cache_put_port);
+        get_fd = prepare_server_socket(CACHE_GET_PORT);
 
-        if(init_sync_structures()) 
+        if(init_cache()) 
                 return -1;
-
-        // TODO - init functions that handle image receptions and sending
-        
+       
         if (pthread_create(
             &put_thr, NULL, accept_put_image_connections, (void*) &put_fd)) {
                 pr_perror("Unable to create put thread");
@@ -28,19 +47,11 @@ int image_cache(unsigned short cache_port)
                 return -1;
         }
 
+        join_workers();
+        
         // TODO - wait for ctrl-c to close every thing;
-
         pthread_join(put_thr, NULL);
         pthread_join(get_thr, NULL);
-
-        /* TODO - What am I gonna do?
-        remote_image* rimg = NULL;
-        list_for_each_entry(rimg, &rimg_head, l) {
-                pthread_join(rimg->putter, NULL);
-                pthread_join(rimg->getter, NULL);
-                // TODO - delete from list?
-        }
-        */
         // TODO - clean memory?
 
         return 0;

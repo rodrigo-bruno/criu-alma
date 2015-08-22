@@ -8,11 +8,12 @@
 #ifndef IMAGE_REMOTE_H
 #define	IMAGE_REMOTE_H
 
-/* Port number to be used for: i) receiving image files connections to be 
- * proxied; ii) storing image files in cache. */
-#define DEFAULT_PUT_PORT 9995
-/* Port number to be used for retrieving image files from cache. */
-#define DEFAULT_GET_PORT 9997
+#define PROXY_GET_PORT 9995
+#define PROXY_PUT_PORT 9996
+#define CACHE_PUT_PORT 9997 // can be overwritten by main
+#define CACHE_GET_PORT 9998
+#define PROXY_FWD_PORT CACHE_PUT_PORT
+#define PROXY_FWD_HOST "localhost" // can be overwritten by main
 
 
 /* Called by restore function. Launches a threads that accepts connections for

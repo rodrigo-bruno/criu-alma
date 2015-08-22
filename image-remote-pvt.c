@@ -4,15 +4,29 @@
 #include <semaphore.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netdb.h>
 
 #include "image-remote-pvt.h"
 #include "criu-log.h"
 
+typedef struct wthread {
+    pthread_t tid;
+    struct list_head l;
+} worker_thread;
+
 static LIST_HEAD(rimg_head);
+static pthread_mutex_t rimg_lock;
+static sem_t rimg_semph;
+
+static LIST_HEAD(workers_head);
+static pthread_mutex_t workers_lock;
+static sem_t workers_semph;
+
 static int finished = 0;
 static int putting = 0;
-static pthread_mutex_t lock;
-static sem_t semph;
+
+static void* (*get_func)(void*);
+static void* (*put_func)(void*);
 
 static remote_image* get_rimg_by_path(const char* path) 
 {
@@ -25,42 +39,25 @@ static remote_image* get_rimg_by_path(const char* path)
         return NULL;
 }
 
-static remote_image* wait_for_image(int cli_fd, const char* path) 
-{
-        remote_image *result;
-    
-        while (1) {
-                pthread_mutex_lock(&lock);
-                result = get_rimg_by_path(path);
-                pthread_mutex_unlock(&lock);
-                if (result != NULL) {
-                        if (write(cli_fd, path, PATHLEN) < 1) {
-                                pr_perror("Unable to send ack to get image connection");
-                                close(cli_fd);
-                                return NULL;
-                        }
-                        return result;
-                }
-                if (finished && !putting) {
-                        if (write(cli_fd, DUMP_FINISH, PATHLEN) < 1) {
-                                pr_perror("Unable to send nack to get image connection");
-                        }
-                        close(cli_fd);
-                        return NULL;
-                }
-                sem_wait(&semph);
-        }
-}
-
 int init_sync_structures() 
 {
-        if (pthread_mutex_init(&lock, NULL) != 0) {
+        if (pthread_mutex_init(&rimg_lock, NULL) != 0) {
                 pr_perror("Remote image connection mutex init failed");
                 return -1;
         }
 
-        if (sem_init(&semph, 0, 0) != 0) {
+        if (sem_init(&rimg_semph, 0, 0) != 0) {
                 pr_perror("Remote image connection semaphore init failed");
+                return -1;
+        }
+        
+        if (pthread_mutex_init(&workers_lock, NULL) != 0) {
+                pr_perror("Workers mutex init failed");
+                return -1;
+        }
+
+        if (sem_init(&workers_semph, 0, 0) != 0) {
+                pr_perror("Workers semaphore init failed");
                 return -1;
         }
         return 0;
@@ -73,28 +70,38 @@ void* get_remote_image(void* ptr)
         return NULL;
 }
 
-void* proxy_remote_image(void* ptr)
+void prepare_put_rimg() 
 {
-    // TODO
-    return NULL;
+        pthread_mutex_lock(&rimg_lock);
+        putting++;
+        pthread_mutex_unlock(&rimg_lock);    
 }
 
-void* put_remote_image(void* ptr) 
+void finalize_put_rimg(remote_image* rimg) 
 {
-        remote_image* rimg = (remote_image*) ptr;
-    
-        pthread_mutex_lock(&lock);
-        putting++;
-        pthread_mutex_unlock(&lock);    
-    
-        recv_remote_image(rimg->src_fd, rimg->path, &rimg->buf_head);
-    
-        pthread_mutex_lock(&lock);
+        pthread_mutex_lock(&rimg_lock);
         list_add_tail(&(rimg->l), &rimg_head);
         putting--;
-        pthread_mutex_unlock(&lock);
-        sem_post(&semph);
-        return NULL;
+        pthread_mutex_unlock(&rimg_lock);
+        sem_post(&rimg_semph);
+}
+
+int init_proxy() 
+{
+#if GC_COMPRESSION
+        get_func = get_proxied_image;
+#else
+        get_func = get_remote_image;
+#endif
+        put_func = proxy_remote_image;
+        return init_sync_structures();
+}
+
+int init_cache() 
+{
+        get_func = get_remote_image;
+        put_func = cache_remote_image;
+        return init_sync_structures();
 }
 
 int prepare_server_socket(int port) 
@@ -132,15 +139,109 @@ int prepare_server_socket(int port)
         return sockfd;
 }
 
+int prepare_client_socket(char* hostname, int port)
+{
+        struct hostent *server;
+        struct sockaddr_in serv_addr;
+        
+        int sockfd = socket(AF_INET, SOCK_STREAM, 0); 
+        if (sockfd < 0) {
+                pr_perror("Unable to open recover image socket");
+                return -1;
+        }
+
+        server = gethostbyname(hostname);
+        if (server == NULL) {
+                pr_perror("Unable to get host by name (%s)", hostname);
+                return -1;
+        }
+
+        bzero((char *) &serv_addr, sizeof (serv_addr));
+        serv_addr.sin_family = AF_INET;
+        bcopy((char *) server->h_addr,
+              (char *) &serv_addr.sin_addr.s_addr,
+              server->h_length);
+        serv_addr.sin_port = htons(port);
+
+        if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+                pr_perror("Unable to connect to remote restore host %s", hostname);
+                return -1;
+        }  
+        
+        return sockfd;
+}
+
+static void add_worker(pthread_t tid)
+{
+        worker_thread* wthread = malloc(sizeof(worker_thread));
+        if(!wthread) {
+                pr_perror("Unable to allocate worker thread structure");
+        }
+        wthread->tid = tid;
+        pthread_mutex_lock(&workers_lock);
+        list_add_tail(&(wthread->l), &workers_head);
+        pthread_mutex_unlock(&workers_lock);
+        sem_post(&workers_semph);
+}
+
+void join_workers()
+{
+        worker_thread* wthread = NULL;
+        while(1) {
+            if(list_empty(&workers_head)) {
+                    sem_wait(&workers_semph);
+                    continue;
+            }
+            wthread = list_entry(workers_head.next, worker_thread, l);
+            if(!pthread_join(wthread->tid, NULL)) {
+                    pr_perror("Could not join thread %lu", (unsigned long) wthread->tid);
+            }
+            else {
+                    pr_info("Joined thread %lu\n", (unsigned long) wthread->tid);
+                    list_del(&(wthread->l));
+                    free(wthread);
+            }
+            
+        }
+}
+
+static remote_image* wait_for_image(int cli_fd, const char* path) 
+{
+        remote_image *result;
+    
+        while (1) {
+                pthread_mutex_lock(&rimg_lock);
+                result = get_rimg_by_path(path);
+                pthread_mutex_unlock(&rimg_lock);
+                if(result != NULL) {
+                        if (write(cli_fd, path, PATHLEN) < 1) {
+                                pr_perror("Unable to send ack to get image connection");
+                                close(cli_fd);
+                                return NULL;
+                        }
+                        return result;
+                }
+                if(finished && !putting) {
+                        if (write(cli_fd, DUMP_FINISH, PATHLEN) < 1) {
+                                pr_perror("Unable to send nack to get image connection");
+                        }
+                        close(cli_fd);
+                        return NULL;
+                }
+                sem_wait(&rimg_semph);
+        }
+}
+
 void* accept_get_image_connections(void* port) 
 {
         socklen_t clilen;
         int n, cli_fd;
+        pthread_t tid;
         int get_fd = *((int*) port);
         struct sockaddr_in cli_addr;
         clilen = sizeof (cli_addr);
         char path_buf[PATHLEN];
-        remote_image* img;
+        remote_image* rimg;
 
         while (1) {
         
@@ -161,25 +262,31 @@ void* accept_get_image_connections(void* port)
 
                 pr_info("Received GET for %s.\n", path_buf);
 
-                img = wait_for_image(cli_fd, path_buf);
-                if(!img) {
+                rimg = wait_for_image(cli_fd, path_buf);
+                if(!rimg) {
                         continue;
                 }
 
-                img->dst_fd = cli_fd;
+                rimg->dst_fd = cli_fd;
 
                 if (pthread_create(
-                    &img->getter, NULL, get_remote_image, (void*) img)) {
+                    &tid, NULL, get_func, (void*) rimg)) {
                         pr_perror("Unable to create put thread");
                         return NULL;
-                } 
-            }
+                }
+                
+                pr_info("Serving Get request for %s (tid=%lu)\n", 
+                        rimg->path, (unsigned long) tid);
+                
+                add_worker(tid);
+        }
 }
 
 void* accept_put_image_connections(void* port) 
 {
         socklen_t clilen;
         int n, cli_fd;
+        pthread_t tid;
         int put_fd = *((int*) port);
         struct sockaddr_in cli_addr;
         clilen = sizeof(cli_addr);
@@ -202,14 +309,6 @@ void* accept_put_image_connections(void* port)
                         continue;
                 }
 
-                if (!strncmp(path_buf, DUMP_FINISH, sizeof (DUMP_FINISH))) {
-                        close(cli_fd);
-                        close(put_fd);
-                        finished = 1;
-                        sem_post(&semph);
-                        return NULL;
-                }
-
                 remote_image* rimg = malloc(sizeof (remote_image));
                 if (rimg == NULL) {
                         pr_perror("Unable to allocate remote_image structures");
@@ -225,17 +324,26 @@ void* accept_put_image_connections(void* port)
                 strncpy(rimg->path, path_buf, PATHLEN);
                 rimg->src_fd = cli_fd;
                 rimg->dst_fd = -1;
-                INIT_LIST_HEAD(&(rimg->buf_head));
                 buf->nbytes = 0;
                 INIT_LIST_HEAD(&(rimg->buf_head));
                 list_add_tail(&(buf->l), &(rimg->buf_head));
 
                 if (pthread_create(
-                    &rimg->putter, NULL, put_remote_image, (void*) rimg)) {
+                    &tid, NULL, put_func, (void*) rimg)) {
                         pr_perror("Unable to create put thread");
                         return NULL;
                 } 
-                pr_info("Reveiced PUT request for %s\n", rimg->path);
+                
+                pr_info("Reveiced PUT request for %s (tid=%lu)\n", 
+                        rimg->path, (unsigned long) tid);
+                
+                add_worker(tid);
+                
+                if (!strncmp(path_buf, DUMP_FINISH, sizeof (DUMP_FINISH))) {
+                        finished = 1;
+                        pr_info("Received DUMP FINISH\n");
+                        sem_post(&rimg_semph);
+                }
         }
 }
 

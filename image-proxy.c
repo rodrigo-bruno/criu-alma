@@ -21,19 +21,10 @@
 #include "protobuf/pagemap.pb-c.h"
 #include "image-desc.h"
 
-// GC compression means that we avoid transferring garbage data.
-#define GC_COMPRESSION 0
-
 // TODO - check when both proxy and cache daemons die.
-// TODO - I need to have a port open for get images (for dedup purposes)
-// TODO - get code from cache into the shared source code.
 
-static LIST_HEAD(rimg_head);
-static int sockfd = -1;
-static sem_t semph;
-static unsigned short server_port = DEFAULT_PUT_PORT;
 static char* dst_host;
-static unsigned short dst_port = DEFAULT_PUT_PORT;
+static unsigned short dst_port = CACHE_PUT_PORT;
 
 #if GC_COMPRESSION
 
@@ -66,11 +57,22 @@ typedef struct rmem {
 static pthread_mutex_t pages_lock;
 static LIST_HEAD(rmem_head);
 
-static remote_mem* get_rimg_by_path(char* path) 
+static remote_mem* get_rmem_by_path(char* path) 
 {
         remote_mem* rmem = NULL;
         list_for_each_entry(rmem, &rmem_head, l) {
                 if(!strncmp(rmem->path, path, PATHLEN)) {
+                        return rmem;
+                }
+        }
+        return NULL;
+}
+
+static remote_mem* get_rmem_by_rimg(remote_image* rimg) 
+{
+        remote_mem* rmem = NULL;
+        list_for_each_entry(rmem, &rmem_head, l) {
+                if(!strncmp(rmem->pagemap->path, rimg->path, PATHLEN)) {
                         return rmem;
                 }
         }
@@ -449,7 +451,7 @@ remote_mem* get_rmem_for(char* path)
         remote_mem *result;
 
         pthread_mutex_lock(&pages_lock);
-        result = get_rimg_by_path(path);
+        result = get_rmem_by_path(path);
         if(!result) {
                 result = malloc(sizeof(remote_mem));
                 if(result == NULL) {
@@ -457,29 +459,27 @@ remote_mem* get_rmem_for(char* path)
                         pthread_mutex_unlock(&pages_lock);
                         return NULL;
                 }
-                else {
-                        INIT_LIST_HEAD(&(result->pagemap_head));
-                        INIT_LIST_HEAD(&(result->garbage_head));
-                        strncpy(result->path, path, PATHLEN);
-                        result->pages_cached = malloc(sizeof(sem_t));
-                        result->garbage_cached = malloc(sizeof(sem_t));
-                        if(!result->garbage_cached || !result->pages_cached) {
-                                pr_perror("Unable to allocate sem_t structures");
-                                pthread_mutex_unlock(&pages_lock);
-                                return NULL;    
-                        }
-                        if (sem_init(result->pages_cached, 0, 0) != 0) {
-                                pr_perror("Pages cached semaphore init failed");
-                                pthread_mutex_unlock(&pages_lock);
-                                return NULL;  
-                        }
-                        if (sem_init(result->garbage_cached, 0, 0) != 0) {
-                                pr_perror("Gargabe cached semaphore init failed");
-                                pthread_mutex_unlock(&pages_lock);
-                                return NULL;  
-                        }
-                        list_add_tail(&(result->l), &rmem_head);
+                INIT_LIST_HEAD(&(result->pagemap_head));
+                INIT_LIST_HEAD(&(result->garbage_head));
+                strncpy(result->path, path, PATHLEN);
+                result->pages_cached = malloc(sizeof(sem_t));
+                result->garbage_cached = malloc(sizeof(sem_t));
+                if(!result->garbage_cached || !result->pages_cached) {
+                        pr_perror("Unable to allocate sem_t structures");
+                        pthread_mutex_unlock(&pages_lock);
+                        return NULL;    
                 }
+                if (sem_init(result->pages_cached, 0, 0) != 0) {
+                        pr_perror("Pages cached semaphore init failed");
+                        pthread_mutex_unlock(&pages_lock);
+                        return NULL;  
+                }
+                if (sem_init(result->garbage_cached, 0, 0) != 0) {
+                        pr_perror("Gargabe cached semaphore init failed");
+                        pthread_mutex_unlock(&pages_lock);
+                        return NULL;  
+                }
+                list_add_tail(&(result->l), &rmem_head);
         }
         pthread_mutex_unlock(&pages_lock);
         return result;
@@ -487,17 +487,36 @@ remote_mem* get_rmem_for(char* path)
 
 #endif
 
-void* buffer_remote_image(void* ptr) 
+void* proxy_remote_image(void* ptr)
 {
         remote_image* rimg = (remote_image*) ptr;
+        rimg->dst_fd = prepare_client_socket(dst_host, dst_port);
+        if (rimg->dst_fd < 0) {
+                pr_perror("Unable to open recover image socket");
+                return NULL;
+        }
 
+        if (write(rimg->dst_fd, rimg->path, PATHLEN) < 1) {
+                pr_perror("Unable to send path to remote image connection");
+                return NULL;
+        }
+        
+        prepare_put_rimg();
+        
+        if (!strncmp(rimg->path, DUMP_FINISH, sizeof(DUMP_FINISH))) 
+        {
+            close(rimg->dst_fd);
+            finalize_put_rimg(rimg);
+            return NULL;
+        }
 #if GC_COMPRESSION
-        if(!strncmp(rimg->path, "pages-", 6)) {
+        else if(!strncmp(rimg->path, "pages-", 6)) {
                 remote_mem* rmem = get_rmem_for(rimg->path);
                 rmem->pages = rimg;
                 if (recv_remote_image(rimg->src_fd, rimg->path, &(rimg->buf_head)) < 0) {
                         return NULL;
                 }
+                finalize_put_rimg(rimg);
                 sem_post(rmem->pages_cached);
                 return NULL;
         }
@@ -508,7 +527,7 @@ void* buffer_remote_image(void* ptr)
                         pr_perror("Error unpacking pagemap %s", rimg->path);
                         return NULL;
                 }
-
+                finalize_put_rimg(rimg);
                 rmem1 = get_rmem_for(rmem2.path);
                 rmem1->pagemap = rimg;
                 list_replace(&(rmem2.pagemap_head), &(rmem1->pagemap_head));
@@ -553,147 +572,53 @@ void* buffer_remote_image(void* ptr)
                 return NULL;
         }
 #endif
-    
         if (recv_remote_image(rimg->src_fd, rimg->path, &(rimg->buf_head)) < 0) {
                 return NULL;
         }
-        send_remote_image(rimg->dst_fd, rimg->path, &(rimg->buf_head));
-        return NULL;
+        finalize_put_rimg(rimg);
+        send_remote_image(rimg->dst_fd, rimg->path, &(rimg->buf_head)); 
+    return NULL;
 }
 
-void* accept_remote_image_connections(void* null) 
+#if GC_COMPRESSION
+void* get_proxied_image(void* ptr) 
 {
-        socklen_t clilen;
-        int src_fd, dst_fd, n;
-        struct sockaddr_in cli_addr, serv_addr;
-        clilen = sizeof (cli_addr);
-        struct hostent *restore_server;
+        remote_image* rimg = (remote_image*) ptr;
 
-        while (1) {
-                src_fd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-                if (src_fd < 0) {
-                        pr_perror("Unable to accept checkpoint image connection");
-                        continue;
-                }
-
-                remote_image* img = malloc(sizeof (remote_image));
-                if (img == NULL) {
-                        pr_perror("Unable to allocate remote_image structures");
+        if(!strncmp(rimg->path, "pagemap-", 8)) {
+                remote_mem* rmem = get_rmem_by_rimg(rimg);
+                if(!rmem) {
+                        pr_perror("Could not find rmem for %s", rimg->path);
                         return NULL;
                 }
-
-                remote_buffer* buf = malloc(sizeof (remote_buffer));
-                if(buf == NULL) {
-                        pr_perror("Unable to allocate remote_buffer structures");
+                if(pack_pagemap(rimg, rmem) == -1) {
+                        pr_perror("Error packing pagemap %s", rimg->path);
                         return NULL;
                 }
-
-                n = read(src_fd, img->path, PATHLEN);
-                if (n < 0) {
-                        pr_perror("Error reading from checkpoint remote image socket");
-                        continue;
-                } else if (n == 0) {
-                        pr_perror("Remote checkpoint image socket closed before receiving path");
-                        continue;
-                }
-
-                dst_fd = socket(AF_INET, SOCK_STREAM, 0);
-                if (dst_fd < 0) {
-                        pr_perror("Unable to open recover image socket");
-                        return NULL;
-                }
-
-                restore_server = gethostbyname(dst_host);
-                if (restore_server == NULL) {
-                        pr_perror("Unable to get host by name (%s)", dst_host);
-                        return NULL;
-                }
-
-                bzero((char *) &serv_addr, sizeof (serv_addr));
-                serv_addr.sin_family = AF_INET;
-                bcopy((char *) restore_server->h_addr,
-                      (char *) &serv_addr.sin_addr.s_addr,
-                      restore_server->h_length);
-                serv_addr.sin_port = htons(dst_port);
-
-                n = connect(dst_fd, (struct sockaddr *) &serv_addr, sizeof (serv_addr));
-                if (n < 0) {
-                        pr_perror("Unable to connect to remote restore host %s", dst_host);
-                        return NULL;
-                }
-
-                if (write(dst_fd, img->path, PATHLEN) < 1) {
-                        pr_perror("Unable to send path to remote image connection");
-                        return NULL;
-                }
-
-                if (!strncmp(img->path, DUMP_FINISH, sizeof (DUMP_FINISH))) {
-                        pr_info("Dump side is finished!\n");
-                        free(img);
-                        free(buf);
-                        close(src_fd);
-                        sem_post(&semph);
-                        return NULL;
-                }
-
-                img->src_fd = src_fd;
-                img->dst_fd = dst_fd;
-                buf->nbytes = 0;
-                INIT_LIST_HEAD(&(img->buf_head));
-                list_add_tail(&(buf->l), &(img->buf_head));
-
-                if(pthread_create(
-                    &img->putter, NULL, buffer_remote_image, (void*) img)) {
-                            pr_perror("Unable to create socket thread");
-                            return NULL;
-                } 
-
-                pr_info("Reveiced put request for %s.\n", img->path);
-                list_add_tail(&(img->l), &rimg_head);
         }
+        else {
+                send_remote_image(rimg->dst_fd, rimg->path, &rimg->buf_head);
+        }
+        return NULL;    
 }
+#endif
 
-int image_proxy(char* cache_host, unsigned short cache_port) 
+int image_proxy(char* fwd_host, unsigned short fwd_port) 
 {
-        int sockopt = 1;
-        struct sockaddr_in serv_addr;
-        pthread_t sock_thr;
+        pthread_t get_thr, put_thr;
+        int put_fd, get_fd;
+        
+        dst_host = fwd_host;
+        dst_port = fwd_port;
+        
+        pr_info("Proxy Get Port %d, Put Port %d, Destination Host %s:%hu\n", 
+                PROXY_GET_PORT, PROXY_PUT_PORT, fwd_host, fwd_port);
 
-        dst_host = cache_host;
-        dst_port = cache_port;
-        pr_info("Proxy Port %d, Destination Host %s:%hu\n", server_port, dst_host, dst_port);
-
-        if (sem_init(&semph, 0, 0) != 0) {
-                pr_perror("Remote image connection semaphore init failed");
+        put_fd = prepare_server_socket(PROXY_PUT_PORT);
+        get_fd = prepare_server_socket(PROXY_GET_PORT);
+        
+        if(init_proxy()) 
                 return -1;
-        }
-
-        sockfd = socket(AF_INET, SOCK_STREAM, 0);
-        if (sockfd < 0) {
-                pr_perror("Unable to open image socket");
-                return -1;
-        }
-
-        bzero((char *) &serv_addr, sizeof (serv_addr));
-        serv_addr.sin_family = AF_INET;
-        serv_addr.sin_addr.s_addr = INADDR_ANY;
-        serv_addr.sin_port = htons(server_port);
-
-        if (setsockopt(
-            sockfd, SOL_SOCKET, SO_REUSEADDR, &sockopt, sizeof (sockopt)) == -1) {
-                pr_perror("Unable to set SO_REUSEADDR");
-                return -1;
-        }
-
-        if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof (serv_addr)) < 0) {
-                pr_perror("Unable to bind image socket");
-                return -1;
-        }
-
-        if (listen(sockfd, DEFAULT_LISTEN)) {
-                pr_perror("Unable to listen image socket");
-                return -1;
-        }
 
 #if GC_COMPRESSION
         if (pthread_mutex_init(&pages_lock, NULL) != 0) {
@@ -703,21 +628,21 @@ int image_proxy(char* cache_host, unsigned short cache_port)
 #endif
 
         if (pthread_create(
-            &sock_thr, NULL, accept_remote_image_connections, NULL)) {
-                pr_perror("Unable to create socket thread");
+            &put_thr, NULL, accept_put_image_connections, (void*) &put_fd)) {
+                pr_perror("Unable to create put thread");
                 return -1;
-
+        }
+        if (pthread_create(
+            &get_thr, NULL, accept_get_image_connections, (void*) &get_fd)) {
+                pr_perror("Unable to create get thread");
+                return -1;
         }
 
-        sem_wait(&semph);
-        // TODO - why not to replace this semph with a pthread_join?
-
-        remote_image* rimg = NULL;
-        list_for_each_entry(rimg, &rimg_head, l) {
-                pthread_join(rimg->putter, NULL);
-                // TODO - delete from list?
-        }
-
+        join_workers();
+        
+        // TODO - wait for ctrl-c to close every thing;
+        pthread_join(put_thr, NULL);
+        pthread_join(get_thr, NULL);
         // TODO - clean memory?
 
         return 0;
