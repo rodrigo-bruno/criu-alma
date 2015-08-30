@@ -10,6 +10,8 @@
 #include "protobuf.h"
 #include "protobuf/pagemap.pb-c.h"
 
+#include "image-remote.h"
+
 #ifndef SEEK_DATA
 #define SEEK_DATA	3
 #define SEEK_HOLE	4
@@ -92,8 +94,18 @@ static void skip_pagemap_pages(struct page_read *pr, unsigned long len)
 		return;
 
 	pr_debug("\tpr%u Skip %lx bytes from page-dump\n", pr->id, len);
-	if (!pr->pe->in_parent)
-		lseek(img_raw_fd(pr->pi), len, SEEK_CUR);
+	if (!pr->pe->in_parent) {
+            // <underscore>
+            if(opts.remote) {
+                    if(skip_remote_bytes(img_raw_fd(pr->pi), len) < 0)
+                            pr_perror("Unable to seek remote bytes");
+            }
+            else {
+                    if(lseek(img_raw_fd(pr->pi), len, SEEK_CUR) < 0)
+                            pr_perror("Unable to lseek");
+            }
+            	
+        }
 	pr->cvaddr += len;
 }
 
@@ -148,7 +160,10 @@ static int read_pagemap_page(struct page_read *pr, unsigned long vaddr, void *bu
 			return ret;
 	} else {
 		int fd = img_raw_fd(pr->pi);
-		off_t current_vaddr = lseek(fd, 0, SEEK_CUR);
+                // <underscore> - this only brings problems if we use auto_dedup
+                // in restore
+		off_t current_vaddr = 0;
+                //off_t current_vaddr = lseek(fd, 0, SEEK_CUR);
 		pr_debug("\tpr%u Read page %lx from self %lx/%"PRIx64"\n", pr->id,
 				vaddr, pr->cvaddr, current_vaddr);
 		ret = read(fd, buf, PAGE_SIZE);
@@ -197,9 +212,20 @@ static int try_open_parent(int dfd, int pid, struct page_read *pr, int pr_flags)
 	int pfd, ret;
 	struct page_read *parent = NULL;
 
-	pfd = openat(dfd, CR_PARENT_LINK, O_RDONLY);
-	if (pfd < 0 && errno == ENOENT)
-		goto out;
+        // <underscore>
+        if(opts.remote) {
+                // NOTE: dfd is either the service fd or a virtual namespace,
+                pfd = dfd == get_service_fd(IMG_FD_OFF) ? 
+                    get_current_namespace_fd() : dfd;
+                pfd -= 1;
+                if(get_namespace(pfd) == NULL)
+                        goto out;
+        }
+        else {
+                pfd = openat(dfd, CR_PARENT_LINK, O_RDONLY);
+                if (pfd < 0 && errno == ENOENT)
+                        goto out;
+        }
 
 	parent = xmalloc(sizeof(*parent));
 	if (!parent)
@@ -214,7 +240,8 @@ static int try_open_parent(int dfd, int pid, struct page_read *pr, int pr_flags)
 		parent = NULL;
 	}
 
-	close(pfd);
+        if(!opts.remote)
+                close(pfd);
 out:
 	pr->parent = parent;
 	return 0;
@@ -222,7 +249,8 @@ out:
 err_free:
 	xfree(parent);
 err_cl:
-	close(pfd);
+        if(!opts.remote)
+                close(pfd);
 	return -1;
 }
 

@@ -57,6 +57,7 @@ typedef struct rmem {
 static pthread_mutex_t pages_lock;
 static LIST_HEAD(rmem_head);
 
+// TODO - check if this needs namespace
 static remote_mem* get_rmem_by_path(char* path) 
 {
         remote_mem* rmem = NULL;
@@ -68,6 +69,7 @@ static remote_mem* get_rmem_by_path(char* path)
         return NULL;
 }
 
+// TODO - check if this needs namespace
 static remote_mem* get_rmem_by_rimg(remote_image* rimg) 
 {
         remote_mem* rmem = NULL;
@@ -496,11 +498,12 @@ void* proxy_remote_image(void* ptr)
                 return NULL;
         }
 
-        if (write(rimg->dst_fd, rimg->path, PATHLEN) < 1) {
-                pr_perror("Unable to send path to remote image connection");
+        if(write_header(rimg->dst_fd, rimg->namespace, rimg->path) < 0) {
+                pr_perror("Error writing header for %s:%s", 
+                        rimg->path, rimg->namespace);
                 return NULL;
-        }
-        
+        }  
+
         prepare_put_rimg();
         
         if (!strncmp(rimg->path, DUMP_FINISH, sizeof(DUMP_FINISH))) 

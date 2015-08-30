@@ -28,16 +28,33 @@ static int putting = 0;
 static void* (*get_func)(void*);
 static void* (*put_func)(void*);
 
-static remote_image* get_rimg_by_path(const char* path) 
+static remote_image* get_rimg_by_name(const char* namespace, const char* path) 
 {
         remote_image* rimg = NULL;
+        pthread_mutex_lock(&rimg_lock);
         list_for_each_entry(rimg, &rimg_head, l) {
-                if(!strncmp(rimg->path, path, PATHLEN)) {
-                    return rimg;
+                if( !strncmp(rimg->path, path, PATHLEN) && 
+                    !strncmp(rimg->namespace, namespace, PATHLEN)) {
+                        pthread_mutex_unlock(&rimg_lock);
+                        return rimg;
                 }
         }
+        pthread_mutex_unlock(&rimg_lock);
         return NULL;
 }
+
+// TODO DEBUG
+/*
+static void print_rimg_list()
+{
+        remote_image* rimg = NULL;
+        pthread_mutex_lock(&rimg_lock);
+        list_for_each_entry(rimg, &rimg_head, l) {
+                pr_info("[print_rimg_list] %s:%s\n", rimg->path, rimg->namespace);            
+        }
+        pthread_mutex_unlock(&rimg_lock);   
+}
+*/
 
 int init_sync_structures() 
 {
@@ -193,11 +210,11 @@ void join_workers()
                     continue;
             }
             wthread = list_entry(workers_head.next, worker_thread, l);
-            if(!pthread_join(wthread->tid, NULL)) {
+            if(pthread_join(wthread->tid, NULL)) {
                     pr_perror("Could not join thread %lu", (unsigned long) wthread->tid);
             }
             else {
-                    pr_info("Joined thread %lu\n", (unsigned long) wthread->tid);
+                    //pr_info("Joined thread %lu\n", (unsigned long) wthread->tid);
                     list_del(&(wthread->l));
                     free(wthread);
             }
@@ -205,28 +222,40 @@ void join_workers()
         }
 }
 
-static remote_image* wait_for_image(int cli_fd, const char* path) 
+static remote_image* wait_for_image(int cli_fd, char* namespace, char* path) 
 {
         remote_image *result;
     
         while (1) {
-                pthread_mutex_lock(&rimg_lock);
-                result = get_rimg_by_path(path);
-                pthread_mutex_unlock(&rimg_lock);
+                result = get_rimg_by_name(namespace, path);
+                // The file exists
                 if(result != NULL) {
-                        if (write(cli_fd, path, PATHLEN) < 1) {
-                                pr_perror("Unable to send ack to get image connection");
+                        if(write_header(cli_fd, namespace, path) < 0) {
+                                pr_perror("Error writing header for %s:%s", 
+                                        path, namespace);
                                 close(cli_fd);
                                 return NULL;
                         }
                         return result;
                 }
+                // The file does not exist and we do not expect new files
                 if(finished && !putting) {
-                        if (write(cli_fd, DUMP_FINISH, PATHLEN) < 1) {
-                                pr_perror("Unable to send nack to get image connection");
+                        if(write_header(cli_fd, NULL_NAMESPACE, DUMP_FINISH) < 0) {
+                                pr_perror("Error writing header for %s:%s", 
+                                        DUMP_FINISH, NULL_NAMESPACE);
                         }
                         close(cli_fd);
                         return NULL;
+                }
+                // The file does not exist but the request is for a parent file.
+                // A parent file may not exist for the first process.
+                if(!putting && !strncmp(path, PARENT_IMG, PATHLEN)) {
+                    if(write_header(cli_fd, namespace, path) < 0) {
+                            pr_perror("Error writing header for %s:%s", 
+                                        path, namespace);
+                    }
+                    close(cli_fd);
+                    return NULL;
                 }
                 sem_wait(&rimg_semph);
         }
@@ -235,12 +264,13 @@ static remote_image* wait_for_image(int cli_fd, const char* path)
 void* accept_get_image_connections(void* port) 
 {
         socklen_t clilen;
-        int n, cli_fd;
+        int cli_fd;
         pthread_t tid;
         int get_fd = *((int*) port);
         struct sockaddr_in cli_addr;
         clilen = sizeof (cli_addr);
         char path_buf[PATHLEN];
+        char namespace_buf[PATHLEN];
         remote_image* rimg;
 
         while (1) {
@@ -248,21 +278,17 @@ void* accept_get_image_connections(void* port)
                 cli_fd = accept(get_fd, (struct sockaddr *) &cli_addr, &clilen);
                 if (cli_fd < 0) {
                         pr_perror("Unable to accept get image connection");
-                        continue;
+                        return NULL;
                 }
 
-                n = read(cli_fd, path_buf, PATHLEN);
-                if (n < 0) {
-                        pr_perror("Error reading from checkpoint remote image socket");
-                        continue;
-                } else if (n == 0) {
-                        pr_perror("Remote checkpoint image socket closed before receiving path");
-                        continue;
+                if(read_header(cli_fd, namespace_buf, path_buf) < 0) {
+                    pr_perror("Error reading header");
+                    continue;
                 }
+                
+                pr_info("Received GET for %s:%s.\n", path_buf, namespace_buf);
 
-                pr_info("Received GET for %s.\n", path_buf);
-
-                rimg = wait_for_image(cli_fd, path_buf);
+                rimg = wait_for_image(cli_fd, namespace_buf, path_buf);
                 if(!rimg) {
                         continue;
                 }
@@ -275,8 +301,8 @@ void* accept_get_image_connections(void* port)
                         return NULL;
                 }
                 
-                pr_info("Serving Get request for %s (tid=%lu)\n", 
-                        rimg->path, (unsigned long) tid);
+                pr_info("Serving Get request for %s:%s (tid=%lu)\n", 
+                        rimg->path, rimg->namespace, (unsigned long) tid);
                 
                 add_worker(tid);
         }
@@ -285,48 +311,64 @@ void* accept_get_image_connections(void* port)
 void* accept_put_image_connections(void* port) 
 {
         socklen_t clilen;
-        int n, cli_fd;
+        int cli_fd;
         pthread_t tid;
         int put_fd = *((int*) port);
         struct sockaddr_in cli_addr;
         clilen = sizeof(cli_addr);
         char path_buf[PATHLEN];
+        char namespace_buf[PATHLEN];
     
         while (1) {
 
                 cli_fd = accept(put_fd, (struct sockaddr *) &cli_addr, &clilen);
                 if (cli_fd < 0) {
                         pr_perror("Unable to accept put image connection");
-                        continue;
-                }
-
-                n = read(cli_fd, path_buf, PATHLEN);
-                if (n < 0) {
-                        pr_perror("Error reading from checkpoint remote image socket");
-                        continue;
-                } else if (n == 0) {
-                        pr_perror("Remote checkpoint image socket closed before receiving path");
-                        continue;
-                }
-
-                remote_image* rimg = malloc(sizeof (remote_image));
-                if (rimg == NULL) {
-                        pr_perror("Unable to allocate remote_image structures");
                         return NULL;
                 }
 
-                remote_buffer* buf = malloc(sizeof (remote_buffer));
-                if(buf == NULL) {
-                        pr_perror("Unable to allocate remote_buffer structures");
-                        return NULL;
+                if(read_header(cli_fd, namespace_buf, path_buf) < 0) {
+                    pr_perror("Error reading header");
+                    continue;
                 }
+                
+                remote_image* rimg = get_rimg_by_name(namespace_buf, path_buf);
+                
+                pr_info("Reveiced PUT request for %s:%s\n", path_buf, namespace_buf);
+                                
+                if(rimg == NULL) {
+                        rimg = malloc(sizeof (remote_image));
+                        if (rimg == NULL) {
+                                pr_perror("Unable to allocate remote_image structures");
+                                return NULL;
+                        }
 
-                strncpy(rimg->path, path_buf, PATHLEN);
+                        remote_buffer* buf = malloc(sizeof (remote_buffer));
+                        if(buf == NULL) {
+                                pr_perror("Unable to allocate remote_buffer structures");
+                                return NULL;
+                        }
+
+                        strncpy(rimg->path, path_buf, PATHLEN);
+                        strncpy(rimg->namespace, namespace_buf, PATHLEN);
+                        buf->nbytes = 0;
+                        INIT_LIST_HEAD(&(rimg->buf_head));
+                        list_add_tail(&(buf->l), &(rimg->buf_head));
+                }
+                // NOTE: we implement a PUT by clearing the previous file.
+                else {
+                    pr_info("Clearing previous images for %s:%s\n", 
+                            path_buf, namespace_buf);
+                        pthread_mutex_lock(&rimg_lock);
+                        list_del(&(rimg->l)); 
+                        pthread_mutex_unlock(&rimg_lock);
+                        while(!list_is_singular(&(rimg->buf_head))) {
+                                list_del(rimg->buf_head.prev);
+                        }
+                        list_entry(rimg->buf_head.next, remote_buffer, l)->nbytes = 0;
+                }
                 rimg->src_fd = cli_fd;
                 rimg->dst_fd = -1;
-                buf->nbytes = 0;
-                INIT_LIST_HEAD(&(rimg->buf_head));
-                list_add_tail(&(buf->l), &(rimg->buf_head));
 
                 if (pthread_create(
                     &tid, NULL, put_func, (void*) rimg)) {
@@ -334,8 +376,8 @@ void* accept_put_image_connections(void* port)
                         return NULL;
                 } 
                 
-                pr_info("Reveiced PUT request for %s (tid=%lu)\n", 
-                        rimg->path, (unsigned long) tid);
+                pr_info("Serving PUT request for %s:%s (tid=%lu)\n", 
+                        rimg->path, rimg->namespace, (unsigned long) tid);
                 
                 add_worker(tid);
                 
@@ -352,13 +394,13 @@ int recv_remote_image(int fd, char* path, struct list_head* rbuff_head)
         remote_buffer* curr_buf = list_entry(rbuff_head->next, remote_buffer, l);
         int n, nblocks;
        
-        nblocks = 1;
+        nblocks = 0;
         while(1) {
                 n = read(fd, 
                          curr_buf->buffer + curr_buf->nbytes, 
                          BUF_SIZE - curr_buf->nbytes);
                 if (n == 0) {
-                        pr_info("Finished receiving %s (%d blocks, %d bytes on last block)\n", 
+                        pr_info("Finished receiving %s (%d full blocks, %d bytes on last block)\n", 
                                 path, nblocks, curr_buf->nbytes);
                         close(fd);
                         return nblocks*BUF_SIZE + curr_buf->nbytes;
@@ -389,14 +431,15 @@ int send_remote_image(int fd, char* path, struct list_head* rbuff_head)
         remote_buffer* curr_buf = list_entry(rbuff_head->next, remote_buffer, l);
         int n, curr_offset, nblocks;
     
-        nblocks = 1;
+        nblocks = 0;
         curr_offset = 0;
     
         while(1) {
-                n = write(
+                n = send(
                     fd, 
                     curr_buf->buffer + curr_offset, 
-                    MIN(BUF_SIZE, curr_buf->nbytes) - curr_offset);
+                    MIN(BUF_SIZE, curr_buf->nbytes) - curr_offset,
+                    MSG_NOSIGNAL);
                 if(n > -1) {
                         curr_offset += n;
                         if(curr_offset == BUF_SIZE) {
@@ -406,14 +449,19 @@ int send_remote_image(int fd, char* path, struct list_head* rbuff_head)
                                 curr_offset = 0;
                         }
                         else if(curr_offset == curr_buf->nbytes) {
-                                pr_info("Finished forwarding %s (%d blocks, %d bytes on last block)\n", 
+                                pr_info("Finished forwarding %s (%d full blocks, %d bytes on last block)\n", 
                                         path, nblocks, curr_offset);
                                 close(fd);
                                return nblocks*BUF_SIZE + curr_buf->nbytes;
                         }
                 }
+                else if(errno == EPIPE || errno == ECONNRESET) {
+                        pr_warn("Connection for %s was closed early than expected\n", 
+                                path);
+                        return 0;
+                }
                 else {
-                        pr_perror("Write on %s socket failed (n=%d)", path, n);
+                        pr_perror("Write on %s socket failed", path);
                         return -1;
                 }
         }

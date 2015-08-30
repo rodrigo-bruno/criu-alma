@@ -220,8 +220,7 @@ struct cr_imgset *cr_glob_imgset_open(int mode)
 
 static int do_open_image(struct cr_img *img, int dfd, int type, unsigned long flags, char *path);
 // <underscore>
-static int do_open_remote_image(struct cr_img *img, int type, unsigned long flags, char *path);
-// </underscore>
+static int do_open_remote_image(struct cr_img *img, int dfd, int type, unsigned long flags, char *path);
 
 struct cr_img *open_image_at(int dfd, int type, unsigned long flags, ...)
 {
@@ -258,7 +257,7 @@ struct cr_img *open_image_at(int dfd, int type, unsigned long flags, ...)
 
         if(opts.remote && 
                 strcmp(path, "stats-dump") && strcmp(path, "stats-restore")) {
-            if (do_open_remote_image(img, type, oflags, path)) {
+            if (do_open_remote_image(img, dfd, type, oflags, path)) {
                     close_image(img);
                     return NULL;
             }
@@ -335,8 +334,8 @@ static int do_open_image(struct cr_img *img, int dfd, int type, unsigned long of
 		pr_perror("Unable to open %s", path);
 		goto err;
 	}
-        
-        pr_info("do_open_image path =%s (fd = %d)\n", path, ret); // <underscore>
+        // <underscore> DEBUG
+        pr_info("do_open_image path =%s (dfd = %d) (fd = %d) (read = %d)\n", path, dfd, ret, flags == O_RDONLY); // <underscore>
 
 	img->_x.fd = ret;
 	if (oflags & O_NOBUF)
@@ -375,31 +374,38 @@ int do_finish_remote_dump() {
     return finish_remote_dump();
 }
 
-static int do_open_remote_image(struct cr_img *img, int type, unsigned long oflags, char *path)
+static int do_open_remote_image(struct cr_img *img, int dfd, int type, unsigned long oflags, char *path)
 {
 	int ret, flags;
 
 	flags = oflags & ~(O_NOBUF | O_SERVICE);
         
+        // TODO - DEBUG
+        pr_info("path = %s, dfd = %d, service_fd = %d current_namespace = %d\n", path, dfd, get_service_fd(IMG_FD_OFF), get_current_namespace_fd());
+        if(dfd == get_service_fd(IMG_FD_OFF) || dfd == -1)
+            dfd = get_current_namespace_fd();
+        
         // TODO - fix this. Find out what is the purpose of this file.
         if(!strcmp("irmap-cache", path)) {
-                pr_info("No %s image\n", path);
-		img->_x.fd = EMPTY_IMG_FD;
-		goto skip_magic;
+            ret = -1;
         }
-        
-        if (flags == O_RDONLY) {
-            pr_info("do_open_remote_image RDONLY path=%s\n", path);
-            ret = get_remote_image_connection(path);
+        else if(get_namespace(dfd) == NULL) {
+            ret = -1;
+        }
+        else if (flags == O_RDONLY) {
+            pr_info("do_open_remote_image RDONLY path=%s namespace=%s\n", 
+                    path, get_namespace(dfd));
+            ret = get_remote_image_connection(get_namespace(dfd), path);
         }
         else {
-            pr_info("do_open_remote_image WDONLY path=%s\n", path);
-            ret = open_remote_image_connection(path);
+            pr_info("do_open_remote_image WDONLY path=%s namespace=%s\n", 
+                    path, get_namespace(dfd));
+            ret = open_remote_image_connection(get_namespace(dfd), path);
         }
         
         if (ret < 0) {
             // TODO - check if there is any better solution for this.
-            pr_info("No %s image\n", path);
+            pr_info("No %s (dfd=%d) image\n", path, dfd);
             img->_x.fd = EMPTY_IMG_FD;
             goto skip_magic;
 	}
@@ -447,7 +453,8 @@ int open_image_lazy(struct cr_img *img)
         
         if(opts.remote && 
                 strcmp(path, "stats-dump") && strcmp(path, "stats-restore")) {
-            ret = do_open_remote_image(img, img->type, img->oflags, path);
+            // TODO - this goes for dfd = 0
+            ret = do_open_remote_image(img, dfd, img->type, img->oflags, path);
         } 
         else {
             ret = do_open_image(img, dfd, img->type, img->oflags, path);
@@ -506,14 +513,10 @@ int open_image_dir(char *dir)
 	close(fd);
 	fd = ret;
         
-        // <underscore> TODO - set current namespace
-
 	if (opts.img_parent) {
-                // <underscore> added if condition for remote operating
-                if(opts.remote) {
-                    // TODO - call image-remote set parent namespace
-                    // TODO - <parent> <namespace A> <namespace B> ...
-                }
+                // <underscore>
+                if(opts.remote)
+                        init_namespace(dir, opts.img_parent);
                 else {
                         ret = symlinkat(opts.img_parent, fd, CR_PARENT_LINK);
                         if (ret < 0 && errno != EEXIST) {
@@ -522,6 +525,10 @@ int open_image_dir(char *dir)
                         }
                 }
 	}
+        // <underscore>
+        else if(opts.remote) {
+                init_namespace(dir, NULL); // TODO - use NULL_PARENT
+        }
 
 	return 0;
 

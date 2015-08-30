@@ -17,6 +17,9 @@
 #include "protobuf.h"
 #include "protobuf/pagemap.pb-c.h"
 
+// <underscore>
+#include "image-remote.h"
+
 struct page_server_iov {
 	u32	cmd;
 	u32	nr_pages;
@@ -731,13 +734,22 @@ static int open_page_local_xfer(struct page_xfer *xfer, int fd_type, long id)
 		int ret;
 		int pfd;
 
-		pfd = openat(get_service_fd(IMG_FD_OFF), CR_PARENT_LINK, O_RDONLY);
-		if (pfd < 0 && errno == ENOENT)
-			goto out;
+                // <underscore>
+		if(opts.remote) {
+                        pfd = get_current_namespace_fd() - 1;
+                        if(get_namespace(pfd) == NULL)
+                                goto out;
+                }
+                else {
+                        pfd = openat(get_service_fd(IMG_FD_OFF), CR_PARENT_LINK, O_RDONLY);
+                        if (pfd < 0 && errno == ENOENT)
+                                goto out;
+                }
 
 		xfer->parent = xmalloc(sizeof(*xfer->parent));
 		if (!xfer->parent) {
-			close(pfd);
+                        if(!opts.remote)
+                                close(pfd);
 			return -1;
 		}
 
@@ -746,10 +758,12 @@ static int open_page_local_xfer(struct page_xfer *xfer, int fd_type, long id)
 			pr_perror("No parent image found, though parent directory is set");
 			xfree(xfer->parent);
 			xfer->parent = NULL;
-			close(pfd);
+			if(!opts.remote)
+                                close(pfd);
 			goto out;
 		}
-		close(pfd);
+		if(!opts.remote)
+                        close(pfd);
 	}
 
 out:
@@ -780,20 +794,26 @@ int check_parent_local_xfer(int fd_type, int id)
 	struct stat st;
 	int ret, pfd;
 
-	pfd = openat(get_service_fd(IMG_FD_OFF), CR_PARENT_LINK, O_RDONLY);
-	if (pfd < 0 && errno == ENOENT)
-		return 0;
+        // <underscore>
+        if(opts.remote) {
+                pfd = get_current_namespace_fd() - 1;
+                return get_namespace(pfd) == NULL ? 0 : 1;
+        }
+        else {
+                pfd = openat(get_service_fd(IMG_FD_OFF), CR_PARENT_LINK, O_RDONLY);
+                if (pfd < 0 && errno == ENOENT)
+                        return 0;
+                snprintf(path, sizeof(path), imgset_template[fd_type].fmt, id);
+                ret = fstatat(pfd, path, &st, 0);
+                if (ret == -1 && errno != ENOENT) {
+                        pr_perror("Unable to stat %s", path);
+                        close(pfd);
+                        return -1;
+                }
 
-	snprintf(path, sizeof(path), imgset_template[fd_type].fmt, id);
-	ret = fstatat(pfd, path, &st, 0);
-	if (ret == -1 && errno != ENOENT) {
-		pr_perror("Unable to stat %s", path);
-		close(pfd);
-		return -1;
-	}
-
-	close(pfd);
-	return (ret == 0);
+                close(pfd);
+                return (ret == 0);
+        }
 }
 
 static int page_server_check_parent(int sk, struct page_server_iov *pi)

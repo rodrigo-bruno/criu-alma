@@ -3,15 +3,11 @@
 
 #include <pthread.h>
 #include "list.h"
+#include "image-remote.h"
 
 #define DEFAULT_LISTEN 50
-#define PATHLEN 32
-#define DUMP_FINISH "DUMP_FINISH"
 #define PAGESIZE 4096
 #define BUF_SIZE PAGESIZE
-
-// TODO - this may be problematic because of double evaluation...
-#define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
 // GC compression means that we avoid transferring garbage data.
 #define GC_COMPRESSION 1
@@ -28,6 +24,7 @@ typedef struct rbuf {
 
 typedef struct rimg {
     char path[PATHLEN];
+    char namespace[PATHLEN];
     int src_fd;
     int dst_fd;
     struct list_head l;
