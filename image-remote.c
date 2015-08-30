@@ -18,10 +18,12 @@
 #include "criu-log.h"
 #include "image-remote.h"
 
-static char parents[PATHLEN][PATHLEN]; // TODO - fix this limitation
+// TODO - fix space limitation
+static char parents[PATHLEN][PATHLEN]; 
 static int  parents_occ = 0;
 static char* namespace = NULL;
-static char* parent = NULL; // TODO - not used for now.
+// TODO - not used for now. It will be used if we implement a shared cache and proxy.
+static char* parent = NULL; 
 
 int setup_local_client_connection(int port) 
 {
@@ -263,8 +265,6 @@ int get_current_namespace_fd()
         }
 
         for(; i < parents_occ; i++) {
-            //TODO - DEBUG
-            // pr_info("[get_current_namespace_fd] parents[%d] = %s\n", i, parents[i]);
             if(!strncmp(parents[i], namespace, PATHLEN))
                 return i;
         }
@@ -276,13 +276,11 @@ char* get_namespace(int dfd)
 {
         if(parents_occ == 0) {
                 if(fetch_namespaces() < 0) {
-                    pr_perror("No namespace in parent hierarchy (%s:%s)", 
-                            namespace, parent);
-                    return NULL;
+                        pr_perror("No namespace in parent hierarchy (%s:%s)",
+                                namespace, parent);
+                        return NULL;
                 }
         }    
-        // TODO - DEBUG
-        // pr_info("dfd = %d, parents_occ = %d, parents[dfd] = %s\n", dfd, parents_occ, parents[dfd]);
         if(dfd >= parents_occ || dfd < 0)
                 return NULL;
         else

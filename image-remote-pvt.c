@@ -43,19 +43,6 @@ static remote_image* get_rimg_by_name(const char* namespace, const char* path)
         return NULL;
 }
 
-// TODO DEBUG
-/*
-static void print_rimg_list()
-{
-        remote_image* rimg = NULL;
-        pthread_mutex_lock(&rimg_lock);
-        list_for_each_entry(rimg, &rimg_head, l) {
-                pr_info("[print_rimg_list] %s:%s\n", rimg->path, rimg->namespace);            
-        }
-        pthread_mutex_unlock(&rimg_lock);   
-}
-*/
-
 int init_sync_structures() 
 {
         if (pthread_mutex_init(&rimg_lock, NULL) != 0) {

@@ -21,8 +21,6 @@
 #include "protobuf/pagemap.pb-c.h"
 #include "image-desc.h"
 
-// TODO - check when both proxy and cache daemons die.
-
 static char* dst_host;
 static unsigned short dst_port = CACHE_PUT_PORT;
 
@@ -643,10 +641,8 @@ int image_proxy(char* fwd_host, unsigned short fwd_port)
 
         join_workers();
         
-        // TODO - wait for ctrl-c to close every thing;
+        // NOTE: these joins will never return...
         pthread_join(put_thr, NULL);
         pthread_join(get_thr, NULL);
-        // TODO - clean memory?
-
         return 0;
 }

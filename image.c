@@ -334,8 +334,6 @@ static int do_open_image(struct cr_img *img, int dfd, int type, unsigned long of
 		pr_perror("Unable to open %s", path);
 		goto err;
 	}
-        // <underscore> DEBUG
-        pr_info("do_open_image path =%s (dfd = %d) (fd = %d) (read = %d)\n", path, dfd, ret, flags == O_RDONLY); // <underscore>
 
 	img->_x.fd = ret;
 	if (oflags & O_NOBUF)
@@ -369,19 +367,12 @@ err:
 	return -1;
 }
 
-// <underscore>
-int do_finish_remote_dump() {
-    return finish_remote_dump();
-}
-
 static int do_open_remote_image(struct cr_img *img, int dfd, int type, unsigned long oflags, char *path)
 {
 	int ret, flags;
 
 	flags = oflags & ~(O_NOBUF | O_SERVICE);
         
-        // TODO - DEBUG
-        pr_info("path = %s, dfd = %d, service_fd = %d current_namespace = %d\n", path, dfd, get_service_fd(IMG_FD_OFF), get_current_namespace_fd());
         if(dfd == get_service_fd(IMG_FD_OFF) || dfd == -1)
             dfd = get_current_namespace_fd();
         
@@ -404,7 +395,6 @@ static int do_open_remote_image(struct cr_img *img, int dfd, int type, unsigned 
         }
         
         if (ret < 0) {
-            // TODO - check if there is any better solution for this.
             pr_info("No %s (dfd=%d) image\n", path, dfd);
             img->_x.fd = EMPTY_IMG_FD;
             goto skip_magic;
@@ -453,7 +443,6 @@ int open_image_lazy(struct cr_img *img)
         
         if(opts.remote && 
                 strcmp(path, "stats-dump") && strcmp(path, "stats-restore")) {
-            // TODO - this goes for dfd = 0
             ret = do_open_remote_image(img, dfd, img->type, img->oflags, path);
         } 
         else {
@@ -558,8 +547,6 @@ void up_page_ids_base(void)
 	page_ids += 0x10000;
 }
 
-// <underscore> so they write a page PagemapHead before at the beginning of a
-// pmi file!!
 struct cr_img *open_pages_image_at(int dfd, unsigned long flags, struct cr_img *pmi)
 {
 	unsigned id;

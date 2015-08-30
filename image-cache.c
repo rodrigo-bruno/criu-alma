@@ -49,10 +49,8 @@ int image_cache(unsigned short cache_put_port)
 
         join_workers();
         
-        // TODO - wait for ctrl-c to close every thing;
+        // NOTE: these joins will never return...
         pthread_join(put_thr, NULL);
         pthread_join(get_thr, NULL);
-        // TODO - clean memory?
-
         return 0;
 }

@@ -80,6 +80,9 @@
 
 #include "asm/dump.h"
 
+//<underscore>
+#include "image-remote.h"
+
 #define NR_ATTEMPTS 5
 
 static char loc_buf[PAGE_SIZE];
@@ -395,12 +398,7 @@ err:
 	return ret;
 }
 
-/*
- * <underscore> This is where memory maps are dumped.
- * TODO - I will probably need to split areas into smaller areas to be able
- * to eliminate some unnecessary pages.
- * TODO - understand the difference between memory mappings and pages...?
- */
+// <underscore> This is where memory maps are dumped.
 static int dump_task_mm(pid_t pid, const struct proc_pid_stat *stat,
 		const struct parasite_dump_misc *misc,
 		const struct vm_area_list *vma_area_list,
@@ -1604,7 +1602,6 @@ static int dump_one_task(struct pstree_item *item)
 	}
 
         // <underscore> This is where page-<#>.img files are created.
-        // TODO - we will have to do it in a page granularity level.
 	ret = parasite_dump_pages_seized(parasite_ctl, &vmas, NULL);
 	if (ret)
 		goto err_cure;
@@ -1786,10 +1783,7 @@ err:
 	return ret;
 }
 
-/* <underscore> Main entry point for a process dump (called from main).
- * TODO - this can be called from two places. Check how opts are configured in
- * both. */
-
+// <underscore> Main entry point for a process dump (called from main).
 int cr_dump_tasks(pid_t pid)
 {
 	struct pstree_item *item;
@@ -1804,7 +1798,6 @@ int cr_dump_tasks(pid_t pid)
         if (opts.remote) {
             printf("Dumping to remote host\n");
         }
-        // <underscore>
 
 	if (init_stats(DUMP_STATS))
 		goto err;
@@ -1835,7 +1828,6 @@ int cr_dump_tasks(pid_t pid)
 		goto err;
 
         // <underscore> writes img inventory. (pb_write_one)
-        // TODO - investigate.
 	if (write_img_inventory())
 		goto err;
 
@@ -1846,7 +1838,6 @@ int cr_dump_tasks(pid_t pid)
 	}
 
         // <underscore> connect to the page server?
-        // TODO - understand what the hell if this page server.
 	if (connect_to_page_server())
 		goto err;
 
@@ -1935,7 +1926,7 @@ err:
         // <underscore>
         if (opts.remote) {
             printf("Finishing remote dump\n");
-            do_finish_remote_dump();
+            finish_remote_dump();
         }
         // </underscore>
 

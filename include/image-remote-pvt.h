@@ -16,6 +16,9 @@
  * This header is used by both the image-proxy and the image-cache.
  */
 
+// TODO - if we want to implement shared cache and proxy, we might need to clean
+// image files from memory. Otherwise we will harvest lots of memory unnecessarily.
+
 typedef struct rbuf {
     char buffer[BUF_SIZE];
     int nbytes; // How many bytes are in the buffer.
@@ -34,20 +37,27 @@ typedef struct rimg {
 
 int init_cache();
 int init_proxy();
+
 void join_workers();
+
 void prepare_put_rimg();
 void finalize_put_rimg(remote_image* rimg);
+
 void* accept_get_image_connections(void* port);
 void* accept_put_image_connections(void* port);
+
 void* cache_remote_image(void* rimg);
 void* proxy_remote_image(void* rimg);
+
+int send_remote_image(int fd, char* path, struct list_head* rbuff_head);
+int recv_remote_image(int fd, char* path, struct list_head* rbuff_head);
+
+int prepare_server_socket(int port);
+int prepare_client_socket(char* server, int port);
+
 #if GC_COMPRESSION
 void* get_proxied_image(void* rimg);
 #endif
-int send_remote_image(int fd, char* path, struct list_head* rbuff_head);
-int recv_remote_image(int fd, char* path, struct list_head* rbuff_head);
-int prepare_server_socket(int port);
-int prepare_client_socket(char* server, int port);
 
 #endif	/* IMAGE_REMOTE_INTERNAL_H */
 

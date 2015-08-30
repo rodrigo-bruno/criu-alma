@@ -47,14 +47,30 @@ extern int image_proxy(char* cache_host, unsigned short cache_port);
  * process. */
 extern int image_cache(unsigned short cache_port);
 
-// TODO - comment
+/* Reads (discards) 'len' bytes from fd. This is used to emulate the function
+ * lseek, which is used to advance the file needle. */
 int skip_remote_bytes(int fd, unsigned long len);
-// TODO - check error handling for callers of these functions
+
+/* To support iterative migration (multiple pre-dumps before the final dump
+ * and subsequent restore, the concept of namespace is introduced. Each image
+ * is tagged with one namespace and we build a hierarchy of namespaces to 
+ * represent the dependency between pagemaps. Currently, the images dir is 
+ * used as namespace when the operation is marked as remote. */
+
+/* Sets the current namesapce and parent namespace. */
 void init_namespace(char* namespace, char* parent);
+
+/* Returns an integer (virtual fd) representing the current namespace. */
 int get_current_namespace_fd();
+
+/* Returns the namespace associated with the virtual fd (given as argument). */
 char* get_namespace(int dfd);
+
+/* Pushes the current namespace into the namespace hierarchy. The hierarchy is
+ * read, modified, and written. */
 int push_namespace();
 
+/* Two functions used to read and write remote images' headers.*/
 int write_header(int fd, char* namespace, char* path);
 int read_header(int fd, char* namespace, char* path);
 
