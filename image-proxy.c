@@ -26,6 +26,7 @@ static unsigned short dst_port = CACHE_PUT_PORT;
 
 #if GC_COMPRESSION
 
+#define GC_SOCK_PORT 9991
 #define PB_PKOBJ_LOCAL_SIZE	1024*4 // Multiplied by 4 to assure no problems.
 
 typedef struct rpagemap {
@@ -34,8 +35,7 @@ typedef struct rpagemap {
 } remote_pagemap;
 
 typedef struct rgarbage {
-        uint64_t vaddr;
-        uint32_t nr_pages;
+        uint64_t start, finish;
         struct list_head l;
 } remote_garbage;
 
@@ -43,17 +43,16 @@ typedef struct rmem {
         char path[PATHLEN];
         remote_image *pages, *pagemap;
         PagemapHead* pheader;
-        struct list_head pagemap_head;
-        struct list_head garbage_head;    
+        struct list_head pagemap_head;   
         u32 pagemap_magic_a;
         u32 pagemap_magic_b;
         struct list_head l;
         sem_t* pages_cached;
-        sem_t* garbage_cached;
 } remote_mem;
 
 static pthread_mutex_t pages_lock;
 static LIST_HEAD(rmem_head);
+static LIST_HEAD(garbage_head);
 
 // TODO - check if this needs namespace
 static remote_mem* get_rmem_by_path(char* path) 
@@ -267,44 +266,6 @@ int pack_pagemap(remote_image* rimg, remote_mem* rmem)
         return nbytes;
 }
 
-// NOTE: I am assuming that the garbage list is received in order.
-int recv_garbage_list(int fd, remote_mem* rmem) 
-{
-        int n = 0;
-        uint64_t vaddr;
-        uint32_t nr_pages;
-        remote_garbage* rgarbage = NULL;
-
-        while(1) {
-                n = read(fd, &vaddr, sizeof(vaddr));
-                if(!n) {
-                        pr_info("Finished receiving garbage list.\n");  
-                        close(fd);
-                        break;
-                }
-                else if(n != sizeof(vaddr)) {
-                        pr_perror("Could not read vaddr from socket (garbage list)");
-                        return -1;
-                }
-
-                n = read(fd, &nr_pages, sizeof(nr_pages));
-                if(n != sizeof(nr_pages)) {
-                        pr_perror("Could not read # pages from socket (garbage list)");
-                        return -1;
-                }
-
-                rgarbage = malloc(sizeof(remote_garbage));
-                if(!rgarbage) {
-                        pr_perror("Could not allocate remote garbage structure");
-                        return -1;
-                }
-                rgarbage->vaddr = vaddr;
-                rgarbage->nr_pages = nr_pages;
-                list_add_tail(&(rgarbage->l), &(rmem->garbage_head));
-        }
-        return 1;
-}
-
 int clean_pages(remote_buffer* rhead, remote_buffer** rpage, 
                 uint64_t curr, uint64_t from, uint64_t to) 
 {
@@ -354,9 +315,10 @@ remote_pagemap* alloc_pagemap()
         return new_pm;
 }
 
+// TODO - fix function
 int compress_garbage(remote_mem* rmem) 
 {
-        remote_garbage* rgarbage = list_entry(rmem->garbage_head.next, remote_garbage, l);
+        remote_garbage* rgarbage = list_entry(garbage_head.next, remote_garbage, l);
         remote_pagemap* rpagemap = list_entry(rmem->pagemap_head.next, remote_pagemap, l);
         remote_buffer* rpage = list_entry(rmem->pages->buf_head.next, remote_buffer, l);
         remote_buffer* rpage_head = rpage;
@@ -364,8 +326,8 @@ int compress_garbage(remote_mem* rmem)
         uint64_t gstart, gend, pstart, pend;
 
         while(rgarbage != NULL) {
-                gstart = rgarbage->vaddr;
-                gend = gstart + rgarbage->nr_pages * PAGESIZE;
+                gstart = rgarbage->start;
+                gend = rgarbage->finish;
 
                 // Advance until we hit the first garbage pages
                 pstart = rpagemap->pentry->vaddr;
@@ -460,22 +422,15 @@ remote_mem* get_rmem_for(char* path)
                         return NULL;
                 }
                 INIT_LIST_HEAD(&(result->pagemap_head));
-                INIT_LIST_HEAD(&(result->garbage_head));
                 strncpy(result->path, path, PATHLEN);
                 result->pages_cached = malloc(sizeof(sem_t));
-                result->garbage_cached = malloc(sizeof(sem_t));
-                if(!result->garbage_cached || !result->pages_cached) {
+                if(!result->pages_cached) {
                         pr_perror("Unable to allocate sem_t structures");
                         pthread_mutex_unlock(&pages_lock);
                         return NULL;    
                 }
                 if (sem_init(result->pages_cached, 0, 0) != 0) {
                         pr_perror("Pages cached semaphore init failed");
-                        pthread_mutex_unlock(&pages_lock);
-                        return NULL;  
-                }
-                if (sem_init(result->garbage_cached, 0, 0) != 0) {
-                        pr_perror("Gargabe cached semaphore init failed");
                         pthread_mutex_unlock(&pages_lock);
                         return NULL;  
                 }
@@ -540,7 +495,6 @@ void* proxy_remote_image(void* ptr)
                 sem_wait(rmem1->pages_cached);
 
                 /*
-                sem_wait(rmem1->garbage_cached);
                 if( compress_garbage(rmem1) == -1) {
                         pr_perror("Compress garbage for %s failed.", rmem1->path);
                         return NULL;
@@ -552,24 +506,9 @@ void* proxy_remote_image(void* ptr)
                         return NULL;
                 }
 
-                // TODO - free memory
+                // TODO - free memory (hein?)
+                // TODO - send bitmap before the image (so that we can reconstruct it)
                 send_remote_image(rmem1->pages->dst_fd, rmem1->pages->path, &(rmem1->pages->buf_head));
-                return NULL;
-        }
-        else if(!strncmp(rimg->path, "garbage-", 8)) {
-                remote_mem* rmem = NULL;
-                char path[PATHLEN];
-                int pid;
-
-                // We do not need to send this file to the cache.
-                close(rimg->dst_fd);
-
-                sscanf(rimg->path, "garbage-%d", &pid);
-                sprintf(path, "pages-%d", pid);
-                rmem = get_rmem_for(path);
-
-                recv_garbage_list(rimg->src_fd, rmem);
-                sem_post(rmem->garbage_cached);
                 return NULL;
         }
 #endif
@@ -602,6 +541,68 @@ void* get_proxied_image(void* ptr)
         }
         return NULL;    
 }
+
+// NOTE: I am assuming that the garbage list is received in order.
+int recv_garbage_list(int fd) 
+{
+        int n = 0;
+        uint64_t start, finish;
+        remote_garbage* rgarbage = NULL;
+
+        while(1) {
+                n = read(fd, &start, sizeof(uint64_t));
+                if(!n) {
+                        pr_info("Finished receiving garbage list.\n");  
+                        close(fd);
+                        break;
+                }
+                else if(n != sizeof(start)) {
+                        pr_perror("Could not read vaddr from socket (garbage list)");
+                        return -1;
+                }
+
+                n = read(fd, &finish, sizeof(uint64_t));
+                if(n != sizeof(uint64_t)) {
+                        pr_perror("Could not read # pages from socket (garbage list)");
+                        return -1;
+                }
+
+                rgarbage = malloc(sizeof(remote_garbage));
+                if(!rgarbage) {
+                        pr_perror("Could not allocate remote garbage structure");
+                        return -1;
+                }
+                rgarbage->start = start;
+                rgarbage->finish = finish;
+                pr_info("Received free region: start=%p finish=%p\n", 
+                    decode_pointer(start), decode_pointer(finish));
+                list_add_tail(&(rgarbage->l), &garbage_head);
+        }
+        return 1;
+}
+
+void* accept_free_regions(void* fd) 
+{
+        int gc_fd = *((int*) fd);
+        int cli_fd;
+        struct sockaddr_in cli_addr;
+        socklen_t clilen = sizeof(cli_addr);
+
+        while (1) {
+
+                cli_fd = accept(gc_fd, (struct sockaddr *) &cli_addr, &clilen);
+                if (cli_fd < 0) {
+                        pr_perror("Unable to accept put image connection");
+                        return NULL;
+                }
+                
+                pr_info("Serving GC request\n");
+
+                if (recv_garbage_list(cli_fd) < 0)
+                        pr_perror("Error while receiving free regions");
+        }
+}
+
 #endif
 
 int image_proxy(char* fwd_host, unsigned short fwd_port) 
@@ -617,13 +618,19 @@ int image_proxy(char* fwd_host, unsigned short fwd_port)
 
         put_fd = prepare_server_socket(PROXY_PUT_PORT);
         get_fd = prepare_server_socket(PROXY_GET_PORT);
-        
         if(init_proxy()) 
                 return -1;
 
 #if GC_COMPRESSION
+        pthread_t gc_thr;
+        int gc_fd  = prepare_server_socket(GC_SOCK_PORT);
         if (pthread_mutex_init(&pages_lock, NULL) != 0) {
                 pr_perror("GC compression mutex init failedpr_perror");
+                return -1;
+        }
+        if (pthread_create(
+            &gc_thr, NULL, accept_free_regions, (void*) &gc_fd)) {
+                pr_perror("Unable to create get thread");
                 return -1;
         }
 #endif
