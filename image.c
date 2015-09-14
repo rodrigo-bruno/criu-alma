@@ -491,7 +491,7 @@ struct cr_img *img_from_fd(int fd)
 int open_image_dir(char *dir)
 {
 	int fd, ret;
-
+        pr_info("HELLO, dir = %s\n", dir);
 	fd = open(dir, O_RDONLY);
 	if (fd < 0) {
 		pr_perror("Can't open dir %s", dir);

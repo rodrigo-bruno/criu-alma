@@ -580,8 +580,6 @@ int main(int argc, char *argv[], char *envp[])
 
 	if (!strcmp(argv[optind], "dump")) {
 		preload_socket_modules();
-                if(opts.remote && push_namespace() < 0)
-                        return 1;
                 
 		if (!tree_id)
 			goto opt_pid_missing;
@@ -589,8 +587,6 @@ int main(int argc, char *argv[], char *envp[])
 	}
 
 	if (!strcmp(argv[optind], "pre-dump")) {
-                if(opts.remote && push_namespace() < 0)
-                        return 1;
                 
 		if (!tree_id)
 			goto opt_pid_missing;

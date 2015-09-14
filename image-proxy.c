@@ -598,6 +598,9 @@ void* accept_free_regions(void* fd)
                 
                 pr_info("Serving GC request\n");
 
+                while(!list_empty(&garbage_head))
+                        list_del(garbage_head.next);
+                
                 if (recv_garbage_list(cli_fd) < 0)
                         pr_perror("Error while receiving free regions");
         }

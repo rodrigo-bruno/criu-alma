@@ -1687,6 +1687,15 @@ int cr_pre_dump_tasks(pid_t pid)
 	int ret = -1;
 	LIST_HEAD(ctls);
 	struct parasite_ctl *ctl, *n;
+        
+        // <underscore>
+        if (opts.remote) {
+            pr_info("Pre-Dumping to remote host\n");
+            if(push_namespace() < 0) {
+                pr_err("Failed to push namesapce.\n");
+                goto err;
+            }
+        }
 
 	if (!opts.track_mem) {
 		pr_info("Enforcing memory tracking for pre-dump.\n");
@@ -1796,7 +1805,11 @@ int cr_dump_tasks(pid_t pid)
         
         // <underscore>
         if (opts.remote) {
-            printf("Dumping to remote host\n");
+            pr_info("Dumping to remote host\n");
+            if(push_namespace() < 0) {
+                pr_err("Failed to push namesapce.\n");
+                goto err;
+            }
         }
 
 	if (init_stats(DUMP_STATS))
