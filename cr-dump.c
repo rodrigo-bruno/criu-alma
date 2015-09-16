@@ -1938,7 +1938,6 @@ err:
 
         // <underscore>
         if (opts.remote) {
-            printf("Finishing remote dump\n");
             finish_remote_dump();
         }
         // </underscore>

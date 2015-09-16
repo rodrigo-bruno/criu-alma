@@ -16,6 +16,15 @@ void* cache_remote_image(void* ptr)
     
         prepare_put_rimg();
     
+#if GC_COMPRESSION
+        if (!strncmp(rimg->path, "pages-", 6)) 
+        {
+                recv_remote_pages(rimg->src_fd, rimg->path, &rimg->buf_head);
+                finalize_put_rimg(rimg);
+                return NULL;
+        }
+#endif
+        
         recv_remote_image(rimg->src_fd, rimg->path, &rimg->buf_head);
         
         finalize_put_rimg(rimg);

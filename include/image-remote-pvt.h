@@ -23,6 +23,9 @@ typedef struct rbuf {
     char buffer[BUF_SIZE];
     int nbytes; // How many bytes are in the buffer.
     struct list_head l;
+#if GC_COMPRESSION
+    char garbage;
+#endif
 } remote_buffer;
 
 typedef struct rimg {
@@ -51,6 +54,11 @@ void* proxy_remote_image(void* rimg);
 
 int send_remote_image(int fd, char* path, struct list_head* rbuff_head);
 int recv_remote_image(int fd, char* path, struct list_head* rbuff_head);
+
+#if GC_COMPRESSION
+int send_remote_pages(int fd, char* path, struct list_head* rbuff_head);
+int recv_remote_pages(int fd, char* path, struct list_head* rbuff_head);
+#endif
 
 int prepare_server_socket(int port);
 int prepare_client_socket(char* server, int port);

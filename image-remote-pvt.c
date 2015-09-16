@@ -453,3 +453,104 @@ int send_remote_image(int fd, char* path, struct list_head* rbuff_head)
                 }
         }
 }
+
+#if GC_COMPRESSION
+size_t recv_remote_obj(int fd, char* buff, size_t size) 
+{
+    size_t n = 0;
+    size_t curr = 0;
+    while(1) {
+            n  = read(fd, buff + curr, size - curr);
+            if(n < 1) {
+                    return n;
+            }
+            curr += n;
+            if(curr == size) {
+                    return size;
+            }
+    }
+}
+
+size_t send_remote_obj(int fd, char* buff, size_t size) 
+{
+    size_t n = 0;
+    size_t curr = 0;
+    while(1) {
+            n = send(fd, buff + curr, size - curr, MSG_NOSIGNAL);
+            if( n < 1) {
+                    return n;
+            }
+            curr += n;
+            if(curr == size) {
+                    return size;
+            }
+    }
+}
+
+int recv_remote_pages(int fd, char* path, struct list_head* rbuff_head) 
+{
+        remote_buffer* curr_buf = list_entry(rbuff_head->next, remote_buffer, l);
+        int n, nblocks;
+       
+        nblocks = 0;
+        while(1) {
+                n = recv_remote_obj(fd, &(curr_buf->garbage), sizeof(char));
+                if(n == 0) {
+                        close(fd);
+                        pr_info("Finished caching %s (%d full blocks)\n", path, nblocks); 
+                        return nblocks;
+                }
+                else if(n != sizeof(char)) {
+                        pr_perror("Read on %s socket failed (garbage)", path);
+                        return -1;
+                }
+                if(!curr_buf->garbage) {
+                        n = recv_remote_obj(fd, curr_buf->buffer, PAGESIZE);
+                        if(n == PAGESIZE) {
+                                nblocks++;
+                        }
+                        else {
+                                pr_perror("Read on %s socket failed (page, n=%d, nblocks=%d)", path, n, nblocks);
+                                return -1;
+                        }
+                }                
+                curr_buf->nbytes = PAGESIZE;
+                curr_buf = malloc(sizeof(remote_buffer));
+                if(curr_buf == NULL) {
+                        pr_perror("Unable to allocate remote_buffer structures");
+                        return -1;
+                }
+                curr_buf->garbage = 1;
+                list_add_tail(&(curr_buf->l), rbuff_head);
+        }
+}
+
+int send_remote_pages(int fd, char* path, struct list_head* rbuff_head) 
+{
+        remote_buffer* curr_buf = list_entry(rbuff_head->next, remote_buffer, l);
+        int nblocks = 0;
+
+        while(1) {
+                if(send_remote_obj(fd, &(curr_buf->garbage), sizeof(char)) != sizeof(char)) {
+                        pr_perror("Write on %s socket failed (garbage)", path);
+                        return -1;
+                }
+                if(!curr_buf->garbage) {
+                        if(send_remote_obj(fd, curr_buf->buffer, PAGESIZE) == PAGESIZE) {
+                                nblocks++;
+                        }
+                        else {
+                                pr_perror("Write on %s socket failed (page)", path);
+                                return -1;
+                        }
+                }
+                curr_buf = list_entry(curr_buf->l.next, remote_buffer, l);
+                // The normal receive adds an extra buffer (empty) in the end.
+                if(curr_buf->nbytes == 0) {
+                        close(fd);
+                        pr_info("Finished forwarding %s (%d full blocks)\n", path, nblocks);
+                        return nblocks;
+                }
+        }
+}
+#endif
