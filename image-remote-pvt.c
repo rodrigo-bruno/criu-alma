@@ -401,6 +401,7 @@ int recv_remote_image(int fd, char* path, struct list_head* rbuff_head)
                                         return -1;
                                 }
                                 buf->nbytes = 0;
+                                buf->garbage = 0;
                                 list_add_tail(&(buf->l), rbuff_head);
                                 curr_buf = buf;
                                 nblocks++;
@@ -504,7 +505,7 @@ int recv_remote_pages(int fd, char* path, struct list_head* rbuff_head)
                         pr_perror("Read on %s socket failed (garbage)", path);
                         return -1;
                 }
-                if(!curr_buf->garbage) {
+                if(curr_buf->garbage != 1) {
                         n = recv_remote_obj(fd, curr_buf->buffer, PAGESIZE);
                         if(n == PAGESIZE) {
                                 nblocks++;
@@ -535,7 +536,7 @@ int send_remote_pages(int fd, char* path, struct list_head* rbuff_head)
                         pr_perror("Write on %s socket failed (garbage)", path);
                         return -1;
                 }
-                if(!curr_buf->garbage) {
+                if(curr_buf->garbage != 1) {
                         if(send_remote_obj(fd, curr_buf->buffer, PAGESIZE) == PAGESIZE) {
                                 nblocks++;
                         }
