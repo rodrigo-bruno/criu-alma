@@ -271,12 +271,12 @@ int pack_pagemap(remote_image* rimg, remote_mem* rmem)
 int compress_garbage(remote_mem* rmem) // TODO - put here garbage head
 {
         remote_garbage* rgarbage = list_entry(garbage_head.next, remote_garbage, l);
+        //rgarbage = list_entry(rgarbage->l.next, remote_garbage, l); // TODO - delete
         remote_pagemap* rpagemap = NULL;
         remote_buffer* rpage = list_entry(rmem->pages->buf_head.next, remote_buffer, l);
         uint64_t gstart, gend, pmstart, pmend, pstart, pend;
         int counter = 0;
 
-        // TODO - put logging and check for unexpected scenarios.
         list_for_each_entry(rpagemap, &(rmem->pagemap_head), l) {
                 gstart = rgarbage->start;
                 gend = rgarbage->finish;
@@ -285,19 +285,15 @@ int compress_garbage(remote_mem* rmem) // TODO - put here garbage head
                 pstart = pmstart;
                 pend = pstart + PAGESIZE;
                 
-                // DELETE? pr_info("pmstart = %p pmend = %p gstart = %p gend = %p\n", 
-                // DELETE?         decode_pointer(pmstart), decode_pointer(pmend),
-                // DELETE?         decode_pointer(gstart), decode_pointer(gend));
-                
+                // TODO - if pagemap is in parent, continue
+                               
                 // This pagemap does not contain garbage
                 if(gstart > pmend) {
-                        // DELETE? pr_info("Pagemap with no garbage.\n");
                         continue;
                 }
                 
                 // Pagemaps might jump over garbage spaces.
                 while(gend < pmstart) {
-                        // DELETE? pr_info("Garbage pages are not mapped. Advancing\n");
                         if(list_is_last(&(rgarbage->l), &garbage_head)) {
                                 // DELETE? pr_info("no more garbage spaces\n");
                                 return 1;
@@ -305,20 +301,9 @@ int compress_garbage(remote_mem* rmem) // TODO - put here garbage head
                         rgarbage = list_entry(rgarbage->l.next, remote_garbage, l);
                         gstart = rgarbage->start;
                         gend = rgarbage->finish;
-                        // DELETE? pr_info("pmstart = %p pmend = %p gstart = %p gend = %p\n", 
-                        // DELETE?      decode_pointer(pmstart), decode_pointer(pmend),
-                        // DELETE?      decode_pointer(gstart), decode_pointer(gend));
                 }
                 
                 while(1) {
-                        
-                        // This means that we finished the pages of the current pagemap
-                        if(pstart >= pmend) {
-                                break;
-                        }
-                        // DELETE? pr_info("pstart = %p pend = %p gstart = %p gend = %p\n", 
-                        // DELETE?     decode_pointer(pstart), decode_pointer(pend),
-                        // DELETE?      decode_pointer(gstart), decode_pointer(gend));
                         // The page is garbage
                         if(pstart >= gstart && pend <= gend) {
                                 rpage->garbage = 1;
@@ -331,22 +316,21 @@ int compress_garbage(remote_mem* rmem) // TODO - put here garbage head
                         if(gend <= pend) {
                                 // Return if all gc spaces were inspected.
                                 if(list_is_last(&(rgarbage->l), &garbage_head)) {
-                                        // DELETE? pr_info("no more garbage spaces\n");
                                         return 1;
                                 }
                                 rgarbage = list_entry(rgarbage->l.next, remote_garbage, l);
                                 gstart = rgarbage->start;
                                 gend = rgarbage->finish;
-                                // DELETE? pr_info("advancing garbage space\n");
-                        }
-                        // Break cycle if this pagemap is finished.
-                        if(pend >= pmend) { 
-                               break;
                         }
                         
                         rpage = list_entry(rpage->l.next, remote_buffer, l);
                         pstart = pend;
                         pend += PAGESIZE;                        
+                        
+                        // Break cycle if this pagemap is finished.
+                        if(pend >= pmend) { 
+                               break;
+                        }
                 }
         }
         return 1;
