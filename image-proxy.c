@@ -266,14 +266,21 @@ int pack_pagemap(remote_image* rimg, remote_mem* rmem)
         return nbytes;
 }
 
+remote_buffer* skip_rbuff(remote_buffer* curr_page, int advance) 
+{
+    for(; advance > 0; advance--) {
+            curr_page = list_entry(curr_page->l.next, remote_buffer, l);
+    }
+    return curr_page;
+}
+
 // Assumption, no garbage space crosses a mapping space
 // Assumption, garbage spaces are ordered
 int compress_garbage(remote_mem* rmem) // TODO - put here garbage head
 {
         remote_garbage* rgarbage = list_entry(garbage_head.next, remote_garbage, l);
-        //rgarbage = list_entry(rgarbage->l.next, remote_garbage, l); // TODO - delete
-        remote_pagemap* rpagemap = NULL;
         remote_buffer* rpage = list_entry(rmem->pages->buf_head.next, remote_buffer, l);
+        remote_pagemap* rpagemap = NULL;
         uint64_t gstart, gend, pmstart, pmend, pstart, pend;
         int counter = 0;
 
@@ -285,32 +292,31 @@ int compress_garbage(remote_mem* rmem) // TODO - put here garbage head
                 pstart = pmstart;
                 pend = pstart + PAGESIZE;
                 
-                // TODO - if pagemap is in parent, continue
+                pr_info("pmap start=%p end=%p (in_parent?%s)\n", 
+                        decode_pointer(pmstart), 
+                        decode_pointer(pmend),
+                        rpagemap->pentry->in_parent ? "T" : "F");
+                
+                // TODO - check if this is right
+                if(rpagemap->pentry->in_parent) {
+                        continue;
+                }
                                
                 // This pagemap does not contain garbage
                 if(gstart > pmend) {
+                        rpage = skip_rbuff(rpage, rpagemap->pentry->nr_pages);
                         continue;
                 }
-                
-                // Pagemaps might jump over garbage spaces.
-                while(gend < pmstart) {
-                        if(list_is_last(&(rgarbage->l), &garbage_head)) {
-                                // DELETE? pr_info("no more garbage spaces\n");
-                                return 1;
-                        }
-                        rgarbage = list_entry(rgarbage->l.next, remote_garbage, l);
-                        gstart = rgarbage->start;
-                        gend = rgarbage->finish;
-                }
-                
-                while(1) {
+
+                while(pend <= pmend) {
                         // The page is garbage
                         if(pstart >= gstart && pend <= gend) {
                                 rpage->garbage = 1;
-                                pr_info("%d garbage pages found - pstart=%p pend=%p gstart=%p gend=%p\n", 
+                                pr_info("%d garbage pages found - pstart=%p pend=%p gstart=%p gend=%p pmstart=%p pmend=%p\n", 
                                         ++counter,
-                                        decode_pointer(pstart), decode_pointer(pend),
-                                        decode_pointer(gstart), decode_pointer(gend));
+                                        decode_pointer(pstart),  decode_pointer(pend),
+                                        decode_pointer(gstart),  decode_pointer(gend),
+                                        decode_pointer(pmstart), decode_pointer(pmend));
                         }
                         // The current garbage space ends here
                         if(gend <= pend) {
@@ -326,11 +332,6 @@ int compress_garbage(remote_mem* rmem) // TODO - put here garbage head
                         rpage = list_entry(rpage->l.next, remote_buffer, l);
                         pstart = pend;
                         pend += PAGESIZE;                        
-                        
-                        // Break cycle if this pagemap is finished.
-                        if(pend >= pmend) { 
-                               break;
-                        }
                 }
         }
         return 1;
