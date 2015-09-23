@@ -14,11 +14,17 @@
 #define PARENT_IMG "parent"
 #define NULL_NAMESPACE "null"
 
-// TODO - there should be only one GET and one PUT port.
-#define PROXY_GET_PORT 9995
-#define PROXY_PUT_PORT 9996
-#define CACHE_PUT_PORT 9997 // can be overwritten by main
-#define CACHE_GET_PORT 9998
+#define LOCAL_DEVEL 0
+
+#define GET_PORT 9998
+#define PUT_PORT 9996
+
+#define PROXY_GET_PORT LOCAL_DEVEL ? 9995 : GET_PORT
+#define PROXY_PUT_PORT PUT_PORT
+
+#define CACHE_GET_PORT GET_PORT
+#define CACHE_PUT_PORT LOCAL_DEVEL ? 9997 : PUT_PORT  // can be overwritten by main
+
 #define PROXY_FWD_PORT CACHE_PUT_PORT
 #define PROXY_FWD_HOST "localhost" // can be overwritten by main
 
