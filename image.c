@@ -370,28 +370,31 @@ err:
 static int do_open_remote_image(struct cr_img *img, int dfd, int type, unsigned long oflags, char *path)
 {
 	int ret, flags;
+        char* namespace = NULL;
 
 	flags = oflags & ~(O_NOBUF | O_SERVICE);
         
         if(dfd == get_service_fd(IMG_FD_OFF) || dfd == -1)
-            dfd = get_current_namespace_fd();
+            namespace = get_current_namespace();
+        else
+            namespace = get_namespace(dfd);
         
         // TODO - fix this. Find out what is the purpose of this file.
         if(!strcmp("irmap-cache", path)) {
             ret = -1;
         }
-        else if(get_namespace(dfd) == NULL) {
+        else if(namespace == NULL) {
             ret = -1;
         }
         else if (flags == O_RDONLY) {
             pr_info("do_open_remote_image RDONLY path=%s namespace=%s\n", 
-                    path, get_namespace(dfd));
-            ret = get_remote_image_connection(get_namespace(dfd), path);
+                    path, namespace);
+            ret = get_remote_image_connection(namespace, path);
         }
         else {
             pr_info("do_open_remote_image WDONLY path=%s namespace=%s\n", 
-                    path, get_namespace(dfd));
-            ret = open_remote_image_connection(get_namespace(dfd), path);
+                    path, namespace);
+            ret = open_remote_image_connection(namespace, path);
         }
         
         if (ret < 0) {

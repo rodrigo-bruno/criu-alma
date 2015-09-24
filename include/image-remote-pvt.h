@@ -42,6 +42,7 @@ int init_cache();
 int init_proxy();
 
 void join_workers();
+remote_image* wait_for_image(int cli_fd, char* namespace, char* path);
 
 void prepare_put_rimg();
 void finalize_put_rimg(remote_image* rimg);

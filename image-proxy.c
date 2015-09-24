@@ -449,9 +449,25 @@ void* proxy_remote_image(void* ptr)
 }
 
 #if GC_COMPRESSION
-void* get_proxied_image(void* ptr) 
+void* get_proxied_image(void* fd) 
 {
-        remote_image* rimg = (remote_image*) ptr;
+        int cli_fd = (long) fd;
+        remote_image* rimg = NULL;
+        char path_buf[PATHLEN];
+        char namespace_buf[PATHLEN];
+    
+        if(read_header(cli_fd, namespace_buf, path_buf) < 0) {
+                pr_perror("Error reading header");
+                return NULL;
+        }
+                
+        pr_info("Received GET for %s:%s.\n", path_buf, namespace_buf);
+    
+        rimg = wait_for_image(cli_fd, namespace_buf, path_buf);
+        if (!rimg)
+                return NULL;
+
+        rimg->dst_fd = cli_fd;
 
         if(!strncmp(rimg->path, "pagemap-", 8)) {
                 remote_mem* rmem = get_rmem_by_rimg(rimg);

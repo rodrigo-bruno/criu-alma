@@ -272,6 +272,11 @@ int get_current_namespace_fd()
         return -1;
 }
 
+char* get_current_namespace()
+{
+        return namespace;
+}
+
 char* get_namespace(int dfd)
 {
         if(parents_occ == 0) {

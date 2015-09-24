@@ -14,7 +14,7 @@
 #define PARENT_IMG "parent"
 #define NULL_NAMESPACE "null"
 
-#define LOCAL_DEVEL 0
+#define LOCAL_DEVEL 1
 
 #define GET_PORT 9998
 #define PUT_PORT 9996
@@ -68,6 +68,9 @@ void init_namespace(char* namespace, char* parent);
 
 /* Returns an integer (virtual fd) representing the current namespace. */
 int get_current_namespace_fd();
+
+/* Returns a pointer to the char array containing the current namesapce. */
+char* get_current_namespace();
 
 /* Returns the namespace associated with the virtual fd (given as argument). */
 char* get_namespace(int dfd);

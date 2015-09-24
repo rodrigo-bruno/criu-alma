@@ -67,9 +67,25 @@ int init_sync_structures()
         return 0;
 }
 
-void* get_remote_image(void* ptr) 
+void* get_remote_image(void* fd) 
 {
-        remote_image* rimg = (remote_image*) ptr;
+        int cli_fd = (long) fd;
+        remote_image* rimg = NULL;
+        char path_buf[PATHLEN];
+        char namespace_buf[PATHLEN];
+    
+        if(read_header(cli_fd, namespace_buf, path_buf) < 0) {
+                pr_perror("Error reading header");
+                return NULL;
+        }
+                
+        pr_info("Received GET for %s:%s.\n", path_buf, namespace_buf);
+    
+        rimg = wait_for_image(cli_fd, namespace_buf, path_buf);
+        if (!rimg)
+                return NULL;
+
+        rimg->dst_fd = cli_fd;
         send_remote_image(rimg->dst_fd, rimg->path, &rimg->buf_head);
         return NULL;
 }
@@ -209,7 +225,7 @@ void join_workers()
         }
 }
 
-static remote_image* wait_for_image(int cli_fd, char* namespace, char* path) 
+remote_image* wait_for_image(int cli_fd, char* namespace, char* path) 
 {
         remote_image *result;
     
@@ -251,14 +267,11 @@ static remote_image* wait_for_image(int cli_fd, char* namespace, char* path)
 void* accept_get_image_connections(void* port) 
 {
         socklen_t clilen;
-        int cli_fd;
+        long cli_fd;
         pthread_t tid;
         int get_fd = *((int*) port);
         struct sockaddr_in cli_addr;
         clilen = sizeof (cli_addr);
-        char path_buf[PATHLEN];
-        char namespace_buf[PATHLEN];
-        remote_image* rimg;
 
         while (1) {
         
@@ -268,29 +281,12 @@ void* accept_get_image_connections(void* port)
                         return NULL;
                 }
 
-                if(read_header(cli_fd, namespace_buf, path_buf) < 0) {
-                    pr_perror("Error reading header");
-                    continue;
-                }
-                
-                pr_info("Received GET for %s:%s.\n", path_buf, namespace_buf);
-
-                rimg = wait_for_image(cli_fd, namespace_buf, path_buf);
-                if(!rimg) {
-                        continue;
-                }
-
-                rimg->dst_fd = cli_fd;
-
                 if (pthread_create(
-                    &tid, NULL, get_func, (void*) rimg)) {
+                    &tid, NULL, get_func, (void*) cli_fd)) {
                         pr_perror("Unable to create put thread");
                         return NULL;
                 }
-                
-                pr_info("Serving Get request for %s:%s (tid=%lu)\n", 
-                        rimg->path, rimg->namespace, (unsigned long) tid);
-                
+
                 add_worker(tid);
         }
 }
