@@ -145,6 +145,23 @@ new_pagemap:
 	}
 }
 
+/* This read_ is a stronger way to read something from a fd. */
+size_t read_(int fd, char* buff, size_t size) 
+{
+    size_t n = 0;
+    size_t curr = 0;
+    while(1) {
+            n  = read(fd, buff + curr, size - curr);
+            if(n < 1) {
+                    return n;
+            }
+            curr += n;
+            if(curr == size) {
+                    return size;
+            }
+    }
+}
+
 static int read_pagemap_page(struct page_read *pr, unsigned long vaddr, void *buf)
 {
 	int ret;
@@ -165,7 +182,7 @@ static int read_pagemap_page(struct page_read *pr, unsigned long vaddr, void *bu
                 //off_t current_vaddr = lseek(fd, 0, SEEK_CUR);
 		pr_debug("\tpr%u Read page %lx from self %lx/%"PRIx64"\n", pr->id,
 				vaddr, pr->cvaddr, current_vaddr);
-		ret = read(fd, buf, PAGE_SIZE);
+		ret = read_(fd, buf, PAGE_SIZE);
 		if (ret != PAGE_SIZE) {
 			pr_perror("Can't read mapping page %d", ret);
 			return -1;
