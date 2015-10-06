@@ -563,7 +563,7 @@ void* accept_free_regions(void* fd)
                 
                 if (recv_garbage_list(cli_fd) < 0)
                         pr_perror("Error while receiving free regions");
-                pthread_mutex_lock(&garbage_lock);
+                pthread_mutex_unlock(&garbage_lock);
         }
 }
 
