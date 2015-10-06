@@ -51,6 +51,7 @@ typedef struct rmem {
 } remote_mem;
 
 static pthread_mutex_t pages_lock;
+static pthread_mutex_t garbage_lock;
 static LIST_HEAD(rmem_head);
 static LIST_HEAD(garbage_head);
 
@@ -433,10 +434,14 @@ void* proxy_remote_image(void* ptr)
 
                 sem_wait(rmem1->pages_cached);
 
+                pthread_mutex_lock(&garbage_lock);
                 if( compress_garbage(rmem1) == -1) {
                         pr_perror("Compress garbage for %s failed.", rmem1->path);
+                        pthread_mutex_unlock(&garbage_lock);
                         return NULL;
                 }
+                pthread_mutex_unlock(&garbage_lock);
+                
                 pr_info("compressing done for %s.\n", rmem1->path);
 
                 if(pack_pagemap(rimg, rmem1) == -1) {
@@ -581,7 +586,11 @@ int image_proxy(char* fwd_host, unsigned short fwd_port)
         pthread_t gc_thr;
         int gc_fd  = prepare_server_socket(GC_SOCK_PORT);
         if (pthread_mutex_init(&pages_lock, NULL) != 0) {
-                pr_perror("GC compression mutex init failedpr_perror");
+                pr_perror("GC compression mutex init failed (pages_lock)");
+                return -1;
+        }
+        if (pthread_mutex_init(&garbage_lock, NULL) != 0) {
+                pr_perror("GC compression mutex init failed (garbage_lock)");
                 return -1;
         }
         if (pthread_create(
