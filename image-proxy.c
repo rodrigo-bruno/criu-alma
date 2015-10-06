@@ -51,6 +51,8 @@ typedef struct rmem {
 } remote_mem;
 
 static pthread_mutex_t pages_lock;
+/* This does not solve completely the problem. There can be still situations when
+ the I get both garbage ranges before compressing the first pagemap.*/
 static pthread_mutex_t garbage_lock;
 static LIST_HEAD(rmem_head);
 static LIST_HEAD(garbage_head);
@@ -555,12 +557,13 @@ void* accept_free_regions(void* fd)
                 }
                 
                 pr_info("Serving GC request\n");
-
+                pthread_mutex_lock(&garbage_lock);
                 while(!list_empty(&garbage_head))
                         list_del(garbage_head.next);
                 
                 if (recv_garbage_list(cli_fd) < 0)
                         pr_perror("Error while receiving free regions");
+                pthread_mutex_lock(&garbage_lock);
         }
 }
 
