@@ -324,15 +324,7 @@ int compress_garbage(remote_mem* rmem) // TODO - put here garbage head
                                 if(list_is_last(&(rgarbage->l), &garbage_head)) {
                                         return 1;
                                 }
-                                
-                                pr_info("PRINTING!\n");
-                                remote_garbage* rg_aux = NULL;
-                                list_for_each_entry(rg_aux, &garbage_head, l) 
-                                {
-                                    pr_info("Garbage area gstart=%p gend=%p\n", decode_pointer(rg_aux->start), decode_pointer(rg_aux->finish));
-                                }
-                                pr_info("DONE PRINTING!\n");
-                                    
+
                                 rgarbage = list_entry(rgarbage->l.next, remote_garbage, l);
                                 gstart = rgarbage->start;
                                 gend = rgarbage->finish;
