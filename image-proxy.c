@@ -39,8 +39,15 @@ typedef struct rgarbage {
         struct list_head l;
 } remote_garbage;
 
+typedef struct rgarbagelist {
+    struct list_head head;
+    struct list_head l;
+} remote_garbage_list;
+
 typedef struct rmem {
         char path[PATHLEN];
+        char namespace[PATHLEN];
+        remote_garbage_list* rgl;
         remote_image *pages, *pagemap;
         PagemapHead* pheader;
         struct list_head pagemap_head;   
@@ -51,30 +58,28 @@ typedef struct rmem {
 } remote_mem;
 
 static pthread_mutex_t pages_lock;
-/* This does not solve completely the problem. There can be still situations when
- the I get both garbage ranges before compressing the first pagemap.*/
 static pthread_mutex_t garbage_lock;
 static LIST_HEAD(rmem_head);
 static LIST_HEAD(garbage_head);
 
-// TODO - check if this needs namespace
-static remote_mem* get_rmem_by_path(char* path) 
+static remote_mem* get_rmem_by_path(char* namespace, char* path) 
 {
         remote_mem* rmem = NULL;
         list_for_each_entry(rmem, &rmem_head, l) {
-                if(!strncmp(rmem->path, path, PATHLEN)) {
+                if(!strncmp(rmem->path, path, PATHLEN) &&
+                   !strncmp(rmem->namespace, namespace, PATHLEN)) {
                         return rmem;
                 }
         }
         return NULL;
 }
 
-// TODO - check if this needs namespace
 static remote_mem* get_rmem_by_rimg(remote_image* rimg) 
 {
         remote_mem* rmem = NULL;
         list_for_each_entry(rmem, &rmem_head, l) {
-                if(!strncmp(rmem->pagemap->path, rimg->path, PATHLEN)) {
+                if(!strncmp(rmem->pagemap->path, rimg->path, PATHLEN) &&
+                   !strncmp(rmem->pagemap->namespace, rimg->namespace, PATHLEN)) {
                         return rmem;
                 }
         }
@@ -213,6 +218,7 @@ int unpack_pagemap(remote_image* rimg, remote_mem* rmem)
         nbytes = ret;
         rmem->pheader = (PagemapHead*) pobj;
         sprintf(rmem->path, "pages-%d.img", rmem->pheader->pages_id);
+        strncpy(rmem->namespace, rimg->namespace, PATHLEN);
 
         while (1) {
                ret = pb_unpack_object(rimg->src_fd, 1, PB_PAGEMAP, &pobj);
@@ -279,9 +285,9 @@ remote_buffer* skip_rbuff(remote_buffer* curr_page, int advance)
 
 // Assumption, no garbage space crosses a mapping space
 // Assumption, garbage spaces are ordered
-int compress_garbage(remote_mem* rmem) // TODO - put here garbage head
+int compress_garbage(remote_mem* rmem)
 {
-        remote_garbage* rgarbage = list_entry(garbage_head.next, remote_garbage, l);
+        remote_garbage* rgarbage = list_entry(rmem->rgl->head.next, remote_garbage, l);
         remote_buffer* rpage = list_entry(rmem->pages->buf_head.next, remote_buffer, l);
         remote_pagemap* rpagemap = NULL;
         uint64_t gstart, gend, pmstart, pmend, pstart, pend;
@@ -324,18 +330,10 @@ int compress_garbage(remote_mem* rmem) // TODO - put here garbage head
                         // The current garbage space ends here
                         if(gend <= pend) {
                                 // Return if all gc spaces were inspected.
-                                if(list_is_last(&(rgarbage->l), &garbage_head)) {
+                                if(list_is_last(&(rgarbage->l), &(rmem->rgl->head))) {
                                         return 1;
                                 }
-                                
-                                pr_info("PRINTING!\n");
-                                remote_garbage* rg_aux = NULL;
-                                list_for_each_entry(rg_aux, &garbage_head, l) 
-                                {
-                                    pr_info("Garbage area gstart=%p gend=%p\n", decode_pointer(rg_aux->start), decode_pointer(rg_aux->finish));
-                                }
-                                pr_info("DONE PRINTING!\n");
-                                    
+
                                 rgarbage = list_entry(rgarbage->l.next, remote_garbage, l);
                                 gstart = rgarbage->start;
                                 gend = rgarbage->finish;
@@ -350,12 +348,12 @@ int compress_garbage(remote_mem* rmem) // TODO - put here garbage head
 }
 
 // Get existing rmem or create one and return it.
-remote_mem* get_rmem_for(char* path) 
+remote_mem* get_rmem_for(char* namespace, char* path) 
 {
         remote_mem *result;
-
+        
         pthread_mutex_lock(&pages_lock);
-        result = get_rmem_by_path(path);
+        result = get_rmem_by_path(namespace, path);
         if(!result) {
                 result = malloc(sizeof(remote_mem));
                 if(result == NULL) {
@@ -365,6 +363,7 @@ remote_mem* get_rmem_for(char* path)
                 }
                 INIT_LIST_HEAD(&(result->pagemap_head));
                 strncpy(result->path, path, PATHLEN);
+                strncpy(result->namespace, namespace, PATHLEN);
                 result->pages_cached = malloc(sizeof(sem_t));
                 if(!result->pages_cached) {
                         pr_perror("Unable to allocate sem_t structures");
@@ -409,7 +408,7 @@ void* proxy_remote_image(void* ptr)
         }
 #if GC_COMPRESSION
         else if(!strncmp(rimg->path, "pages-", 6)) {
-                remote_mem* rmem = get_rmem_for(rimg->path);
+                remote_mem* rmem = get_rmem_for(rimg->namespace, rimg->path);
                 rmem->pages = rimg;
                 if (recv_remote_image(rimg->src_fd, rimg->path, &(rimg->buf_head)) < 0) {
                         return NULL;
@@ -426,24 +425,25 @@ void* proxy_remote_image(void* ptr)
                         return NULL;
                 }
                 finalize_put_rimg(rimg);
-                rmem1 = get_rmem_for(rmem2.path);
+                rmem1 = get_rmem_for(rmem2.namespace, rmem2.path);
                 rmem1->pagemap = rimg;
                 list_replace(&(rmem2.pagemap_head), &(rmem1->pagemap_head));
                 rmem1->pheader = rmem2.pheader;
                 rmem1->pagemap_magic_a = rmem2.pagemap_magic_a;
                 rmem1->pagemap_magic_b = rmem2.pagemap_magic_b;
 
-
                 sem_wait(rmem1->pages_cached);
 
+                // Lock, pop garbage list, unlock
                 pthread_mutex_lock(&garbage_lock);
-                if( compress_garbage(rmem1) == -1) {
-                        pr_perror("Compress garbage for %s failed.", rmem1->path);
-                        pthread_mutex_unlock(&garbage_lock);
-                        return NULL;
-                }
+                rmem1->rgl = list_entry(garbage_head.next, remote_garbage_list, l);
+                list_del(&(rmem1->rgl->l));
                 pthread_mutex_unlock(&garbage_lock);
                 
+                if (compress_garbage(rmem1) == -1) {
+                        pr_perror("Compress garbage for %s failed.", rmem1->path);
+                        return NULL;
+                }
                 pr_info("compressing done for %s.\n", rmem1->path);
 
                 if(pack_pagemap(rimg, rmem1) == -1) {
@@ -503,7 +503,7 @@ void* get_proxied_image(void* fd)
 }
 
 // NOTE: I am assuming that the garbage list is received in order.
-int recv_garbage_list(int fd) 
+int recv_garbage_list(int fd, remote_garbage_list* rgl) 
 {
         int n = 0;
         uint64_t start, finish;
@@ -536,7 +536,7 @@ int recv_garbage_list(int fd)
                 rgarbage->finish = finish;
                 pr_info("Received free region: start=%p finish=%p\n", 
                     decode_pointer(start), decode_pointer(finish));
-                list_add_tail(&(rgarbage->l), &garbage_head);
+                list_add_tail(&(rgarbage->l), &(rgl->head));
         }
         return 1;
 }
@@ -547,6 +547,7 @@ void* accept_free_regions(void* fd)
         int cli_fd;
         struct sockaddr_in cli_addr;
         socklen_t clilen = sizeof(cli_addr);
+        remote_garbage_list* rgl = NULL;
 
         while (1) {
 
@@ -557,12 +558,19 @@ void* accept_free_regions(void* fd)
                 }
                 
                 pr_info("Serving GC request\n");
-                pthread_mutex_lock(&garbage_lock);
-                while(!list_empty(&garbage_head))
-                        list_del(garbage_head.next);
                 
-                if (recv_garbage_list(cli_fd) < 0)
+                rgl = malloc(sizeof(remote_garbage_list));
+                if(!rgl) {
+                        pr_perror("Unable to allocate remote garbage list");
+                        return NULL;
+                }
+                INIT_LIST_HEAD(&(rgl->head));                
+
+                if (recv_garbage_list(cli_fd, rgl) < 0)
                         pr_perror("Error while receiving free regions");
+                
+                pthread_mutex_lock(&garbage_lock);
+                list_add_tail(&(rgl->l), &garbage_head);
                 pthread_mutex_unlock(&garbage_lock);
         }
 }
