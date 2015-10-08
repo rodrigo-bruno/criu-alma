@@ -292,6 +292,7 @@ int compress_garbage(remote_mem* rmem)
         remote_pagemap* rpagemap = NULL;
         uint64_t gstart, gend, pmstart, pmend, pstart, pend;
         int counter = 0;
+        int pmcounter = 0;
 
         list_for_each_entry(rpagemap, &(rmem->pagemap_head), l) {
                 gstart = rgarbage->start;
@@ -300,6 +301,7 @@ int compress_garbage(remote_mem* rmem)
                 pmend = pmstart + rpagemap->pentry->nr_pages * PAGESIZE;
                 pstart = pmstart;
                 pend = pstart + PAGESIZE;
+                pmcounter = 0;
                 
                 pr_info("pmap start=%p end=%p (in_parent?%s)\n", 
                         decode_pointer(pmstart), 
@@ -321,8 +323,10 @@ int compress_garbage(remote_mem* rmem)
                         // The page is garbage
                         if(pstart >= gstart && pend <= gend) {
                                 rpage->garbage = 1;
-                                pr_info("%d garbage pages found - pstart=%p pend=%p gstart=%p gend=%p pmstart=%p pmend=%p\n", 
-                                        ++counter,
+                                counter++;
+                                pmcounter++;
+                                pr_debug("%d garbage pages found - pstart=%p pend=%p gstart=%p gend=%p pmstart=%p pmend=%p\n", 
+                                        counter,
                                         decode_pointer(pstart),  decode_pointer(pend),
                                         decode_pointer(gstart),  decode_pointer(gend),
                                         decode_pointer(pmstart), decode_pointer(pmend));
@@ -331,7 +335,7 @@ int compress_garbage(remote_mem* rmem)
                         if(gend <= pend) {
                                 // Return if all gc spaces were inspected.
                                 if(list_is_last(&(rgarbage->l), &(rmem->rgl->head))) {
-                                        return 1;
+                                        break;
                                 }
 
                                 rgarbage = list_entry(rgarbage->l.next, remote_garbage, l);
@@ -343,7 +347,9 @@ int compress_garbage(remote_mem* rmem)
                         pstart = pend;
                         pend += PAGESIZE;                        
                 }
+                pr_info("%d garbage pages in current pagemap\n", pmcounter);
         }
+        pr_info("%d garbage pages in snapshot\n", counter);
         return 1;
 }
 
