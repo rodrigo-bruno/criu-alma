@@ -303,13 +303,15 @@ int compress_garbage(remote_mem* rmem)
                 pend = pstart + PAGESIZE;
                 pmcounter = 0;
                 
-                pr_info("pmap start=%p end=%p (in_parent?%s)\n", 
+                pr_info("pmap start=%p end=%p (in_parent?%s) gstart=%p gend=%p\n", 
                         decode_pointer(pmstart), 
                         decode_pointer(pmend),
-                        rpagemap->pentry->in_parent ? "T" : "F");
+                        rpagemap->pentry->in_parent|| rpagemap->pentry->has_in_parent ? "T" : "F",
+                        decode_pointer(gstart),
+                        decode_pointer(gend));
                 
                 // TODO - check if this is right
-                if(rpagemap->pentry->in_parent) {
+                if(rpagemap->pentry->in_parent || rpagemap->pentry->has_in_parent) {
                         continue;
                 }
                                
